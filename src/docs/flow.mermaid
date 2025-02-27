@@ -1,0 +1,33 @@
+graph TD
+    A[User Access] --> B{Authentication}
+    B -->|Valid Credentials| C[Dashboard]
+    B -->|Invalid| A
+
+    C --> D{Role Check}
+    D -->|Admin| E[Full Access]
+    D -->|Manager| F[Group Management]
+    D -->|User| G[View Access]
+
+    E --> H[Manage Users]
+    E --> I[Create Groups]
+    E --> J[Delete Groups]
+    E --> K[Assign Roles]
+
+    F --> L[Add Users]
+    F --> M[Remove Users]
+    F --> N[View Codes]
+
+    G --> O[View Assigned]
+    G --> P[Copy Codes]
+
+    subgraph Security
+        Q[Row Level Security]
+        R[Code Rotation]
+        S[Audit Logging]
+    end
+
+    subgraph Real-time
+        T[Code Updates]
+        U[Timer Sync]
+        V[Share Status]
+    end
