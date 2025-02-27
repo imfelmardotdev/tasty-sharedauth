@@ -1,6 +1,6 @@
 # 🔐 Tasty Shared Auth
 
-A modern authentication management platform with role-based access control and real-time code synchronization , developed for Tasty Commpany.
+A modern authentication management platform with role-based access control and real-time code synchronization, developed for Tasty Company.
 
 ## 🚀 Quick Start
 
@@ -63,16 +63,6 @@ npm run preview
 
 The `dist` folder contains static files ready for any hosting platform.
 
-## 📁 Project Overview
-
-```
-src/
-├── app/           # Core app configuration
-├── components/    # React components
-├── contexts/      # Global state management
-├── lib/          # Utilities and services
-└── routes/       # Application routes
-```
 
 ## 📝 Available Scripts
 
