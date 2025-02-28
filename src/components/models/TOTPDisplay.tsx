@@ -1,35 +1,56 @@
 import React, { useState, useEffect } from "react";
 import { generateTOTP, getTimeRemaining } from "@/lib/utils/totp";
 import { Progress } from "@/components/ui/progress";
+import { updateModelCode } from "@/lib/db/queries";
 
 interface TOTPDisplayProps {
   secret: string | null;
+  modelId: string;
 }
 
-const TOTPDisplay = ({ secret }: TOTPDisplayProps) => {
+const TOTPDisplay = ({ secret, modelId }: TOTPDisplayProps) => {
   const [code, setCode] = useState<string>("");
+  const [updateError, setUpdateError] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(30);
 
   useEffect(() => {
     if (!secret) return;
 
-    let intervalId: NodeJS.Timeout;
+    let isActive = true;
+    let timerInterval: NodeJS.Timeout;
 
     const updateCode = async () => {
+      if (!isActive) return;
+
       try {
         const newCode = await generateTOTP(secret);
+        if (!isActive) return; // Check again before state updates
+        
         setCode(newCode);
+        
+        // Try to update the database
+        const updated = await updateModelCode(modelId, newCode);
+        if (!isActive) return;
+
+        if (!updated) {
+          setUpdateError(true);
+          console.warn("Failed to update model code in database");
+        } else {
+          setUpdateError(false);
+        }
       } catch (error) {
+        if (!isActive) return;
         console.error("Error generating TOTP:", error);
+        setUpdateError(true);
         setCode("Error");
       }
     };
 
     const updateTimer = () => {
+      if (!isActive) return;
       const remaining = getTimeRemaining();
       setTimeRemaining(remaining);
 
-      // If we're at the start of a new period, update the code
       if (remaining === 30) {
         updateCode();
       }
@@ -39,13 +60,14 @@ const TOTPDisplay = ({ secret }: TOTPDisplayProps) => {
     updateCode();
     updateTimer();
 
-    // Set up intervals
-    const timerInterval = setInterval(updateTimer, 1000);
+    // Set up interval
+    timerInterval = setInterval(updateTimer, 1000);
     
     return () => {
+      isActive = false;
       clearInterval(timerInterval);
     };
-  }, [secret]);
+  }, [secret, modelId]);
 
   if (!secret) {
     return null;
@@ -53,7 +75,7 @@ const TOTPDisplay = ({ secret }: TOTPDisplayProps) => {
 
   return (
     <div className="space-y-2">
-      <div className="font-mono text-lg">{code}</div>
+      <div className={`font-mono text-lg ${updateError ? 'text-yellow-500' : ''}`}>{code}</div>
       <Progress value={(timeRemaining / 30) * 100} className="h-1" />
       <div className="text-xs text-gray-500">
         Refreshes in {timeRemaining}s

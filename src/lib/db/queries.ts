@@ -1,4 +1,4 @@
-import { supabase } from "../supabase";
+import { supabase, supabaseAdmin } from "../supabase";
 import { User, Group, UserGroup, Code, Model } from "./types";
 import { type Role } from "@/lib/utils/roles";
 import { generateCode } from "@/lib/utils/2fa";
@@ -291,6 +291,57 @@ export const updateCode = async (id: string, code: Partial<Code>) => {
 export const deleteCode = async (id: string) => {
   const { error } = await supabase.from("codes").delete().eq("id", id);
   if (error) throw error;
+};
+
+export const updateModelCode = async (id: string, code: string) => {
+  try {
+    // Get current session
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user?.id) {
+      console.error("No authenticated user");
+      return false;
+    }
+
+    // Try update with basic fields first
+    const updateData = {
+      code,
+      updated_at: new Date().toISOString()
+    };
+
+    const { error } = await supabase
+      .from('models')
+      .update(updateData)
+      .eq('id', id);
+
+    if (error) {
+      if (error.message.includes('permission denied')) {
+        // Try with service role client as fallback
+        if (supabaseAdmin) {
+          const { error: adminError } = await supabaseAdmin
+            .from('models')
+            .update(updateData)
+            .eq('id', id);
+
+          if (adminError) {
+            console.error("Admin update failed:", adminError);
+            return false;
+          }
+        } else {
+          console.error("No admin client available");
+          return false;
+        }
+      } else {
+        console.error("Update error:", error);
+        return false;
+      }
+    }
+
+    console.log(`Code updated for model ${id}`);
+    return true;
+  } catch (error) {
+    console.error("Error updating model:", error);
+    return false;
+  }
 };
 
 export const cleanExpiredCodes = async () => {

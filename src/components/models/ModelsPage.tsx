@@ -59,27 +59,67 @@ const ModelsPage = () => {
   };
 
   useEffect(() => {
-    fetchModels();
+    const setupSubscription = async () => {
+      try {
+        // Get session and fetch initial data
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          console.error("No active session");
+          return;
+        }
+        await fetchModels();
 
-    // Set up realtime subscription
-    if (supabase) {
-      const channel = supabase
-        .channel("models-changes")
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "models",
-          },
-          () => fetchModels(),
-        )
-        .subscribe();
+        // Set up realtime subscription for both regular and admin updates
+        if (supabase) {
+          const channel = supabase
+            .channel('model-updates')
+            .on(
+              'postgres_changes',
+              {
+                event: '*', // Listen for all events
+                schema: 'public',
+                table: 'models',
+              },
+              async (payload) => {
+                console.log('Model update received:', payload);
+                
+                if (payload.eventType === 'UPDATE') {
+                  // Fetch the complete model data to ensure we have all fields
+                  const { data: updatedModel, error } = await supabase
+                    .from('models')
+                    .select('*')
+                    .eq('id', payload.new.id)
+                    .single();
 
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
+                  if (!error && updatedModel) {
+                    setModels(prevModels =>
+                      prevModels.map(model =>
+                        model.id === updatedModel.id ? updatedModel : model
+                      )
+                    );
+                  }
+                }
+              }
+            )
+            .subscribe((status) => {
+              console.log('Subscription status:', status);
+            });
+
+          // Set up periodic refresh to catch any missed updates
+          const refreshInterval = setInterval(fetchModels, 30000);
+
+          return () => {
+            console.log('Cleaning up subscriptions');
+            clearInterval(refreshInterval);
+            supabase.removeChannel(channel);
+          };
+        }
+      } catch (error) {
+        console.error("Error setting up subscription:", error);
+      }
+    };
+
+    setupSubscription();
   }, []);
 
   const handleAddModel = async (values: FormValues) => {
@@ -179,7 +219,10 @@ const ModelsPage = () => {
                     <TableCell>{model.code}</TableCell>
                     <TableCell>
                       {model.totp_secret ? (
-                        <TOTPDisplay secret={model.totp_secret} />
+                        <TOTPDisplay 
+                          secret={model.totp_secret}
+                          modelId={model.id}
+                        />
                       ) : (
                         <span className="text-gray-400">No 2FA configured</span>
                       )}
