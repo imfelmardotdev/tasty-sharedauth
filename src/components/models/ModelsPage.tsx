@@ -8,8 +8,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Copy } from "lucide-react";
 import Header from "../dashboard/Header";
+import TOTPDisplay from "./TOTPDisplay";
 import Sidebar from "../layout/Sidebar";
 import { type Role } from "@/lib/utils/roles";
 import { Model } from "@/lib/db/types";
@@ -17,6 +18,7 @@ import { supabase } from "@/lib/supabase";
 import { getModels, createModel } from "@/lib/db/queries";
 import AddModelModal from "./AddModelModal";
 import EditModelModal from "./EditModelModal";
+import { formSchema, type FormValues, parseFormData } from "./schema";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,18 +38,27 @@ const ModelsPage = () => {
   const [deleteModelId, setDeleteModelId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchModels = async () => {
-      try {
-        const data = await getModels();
+  const fetchModels = async () => {
+    try {
+      console.log("Fetching models...");
+      const data = await getModels();
+      console.log("Models fetched:", data);
+      if (data) {
         setModels(data);
-      } catch (err) {
-        console.error("Error fetching models:", err);
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (err) {
+      console.error("Error fetching models:", err);
+      console.error("Error details:", {
+        name: err.name,
+        message: err.message,
+        stack: err.stack
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchModels();
 
     // Set up realtime subscription
@@ -71,37 +82,39 @@ const ModelsPage = () => {
     }
   }, []);
 
-  const handleAddModel = async (values: any) => {
+  const handleAddModel = async (values: FormValues) => {
     try {
-      await createModel({
-        username: values.username,
-        name: values.name,
-        code: values.code,
-        link: values.link,
+      console.log("Adding model with values:", values);
+      const modelData = {
+        ...parseFormData(values),
         created_at: new Date().toISOString(),
-      });
+      };
+      console.log("Parsed model data:", modelData);
+      await createModel(modelData);
       setIsAddModalOpen(false);
+      fetchModels(); // Reload models after adding
     } catch (err) {
       console.error("Error adding model:", err);
+      console.error("Error details:", {
+        name: err.name,
+        message: err.message,
+        stack: err.stack
+      });
     }
   };
 
-  const handleEditModel = async (values: any) => {
+  const handleEditModel = async (values: FormValues) => {
     if (!editingModel) return;
 
     try {
       const { error } = await supabase
         .from("models")
-        .update({
-          username: values.username,
-          name: values.name,
-          code: values.code,
-          link: values.link,
-        })
+        .update(parseFormData(values))
         .eq("id", editingModel.id);
 
       if (error) throw error;
       setEditingModel(null);
+      fetchModels(); // Reload models after editing
     } catch (err) {
       console.error("Error updating model:", err);
     }
@@ -118,6 +131,7 @@ const ModelsPage = () => {
 
       if (error) throw error;
       setDeleteModelId(null);
+      fetchModels(); // Reload models after deletion
     } catch (err) {
       console.error("Error deleting model:", err);
     }
@@ -152,6 +166,7 @@ const ModelsPage = () => {
                   <TableHead>Name</TableHead>
                   <TableHead>Username</TableHead>
                   <TableHead>Code</TableHead>
+                  <TableHead>2FA Code</TableHead>
                   <TableHead>Link</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -162,6 +177,13 @@ const ModelsPage = () => {
                     <TableCell>{model.name}</TableCell>
                     <TableCell>{model.username}</TableCell>
                     <TableCell>{model.code}</TableCell>
+                    <TableCell>
+                      {model.totp_secret ? (
+                        <TOTPDisplay secret={model.totp_secret} />
+                      ) : (
+                        <span className="text-gray-400">No 2FA configured</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       {model.link && (
                         <a

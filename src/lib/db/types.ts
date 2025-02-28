@@ -33,6 +33,7 @@ export interface Model {
   username: string;
   name: string;
   code: string;
+  totp_secret?: string | null;
   link?: string;
   created_at: string;
 }

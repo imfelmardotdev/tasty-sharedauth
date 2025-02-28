@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState, useRef } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import * as z from "zod";
+import QrScanner from "qr-scanner";
+import { generateTOTP } from "@/lib/utils/totp";
 import {
   Dialog,
   DialogContent,
@@ -20,18 +21,15 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-
-const formSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  username: z.string().min(1, "Username is required"),
-  code: z.string().min(6, "Code must be at least 6 characters"),
-  link: z.string().optional(),
-});
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { QrCode, Key } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { formSchema, type FormValues } from "./schema";
 
 interface AddModelModalProps {
   open?: boolean;
   onClose?: () => void;
-  onSubmit?: (values: z.infer<typeof formSchema>) => void;
+  onSubmit?: (values: FormValues) => void;
 }
 
 const AddModelModal = ({
@@ -39,17 +37,87 @@ const AddModelModal = ({
   onClose = () => {},
   onSubmit = () => {},
 }: AddModelModalProps) => {
-  const form = useForm<z.infer<typeof formSchema>>({
+  const [scannerActive, setScannerActive] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [qrScanner, setQrScanner] = useState<QrScanner | null>(null);
+  const { toast } = useToast();
+
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       username: "",
       code: "",
       link: "",
+      totp_secret: "",
     },
   });
 
-  const handleSubmit = async (values: z.infer<typeof formSchema>) => {
+  const handleSecretInput = async (secret: string) => {
+    try {
+      const cleanedSecret = secret.replace(/\s+/g, "").toUpperCase();
+      if (/^[A-Z2-7]+=*$/.test(cleanedSecret)) {
+        const code = await generateTOTP(cleanedSecret);
+        form.setValue("code", code);
+        form.setValue("totp_secret", cleanedSecret);
+      } else if (cleanedSecret) {
+        toast({
+          title: "Invalid Secret",
+          description: "The secret key must be a valid base32 string.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Invalid TOTP secret:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate code. Please check your secret key.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const startScanner = async () => {
+    if (!videoRef.current) return;
+
+    try {
+      const scanner = new QrScanner(
+        videoRef.current,
+        (result) => {
+          const url = result.data;
+          const params = new URLSearchParams(new URL(url).search);
+          const secret = params.get("secret");
+          if (secret) {
+            handleSecretInput(secret);
+            stopScanner();
+          }
+        },
+        { returnDetailedScanResult: true },
+      );
+
+      setQrScanner(scanner);
+      await scanner.start();
+      setScannerActive(true);
+    } catch (error) {
+      console.error("Failed to start QR scanner:", error);
+      toast({
+        title: "Error",
+        description: "Failed to start QR scanner. Please ensure camera permissions are granted.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const stopScanner = () => {
+    if (qrScanner) {
+      qrScanner.stop();
+      qrScanner.destroy();
+      setQrScanner(null);
+      setScannerActive(false);
+    }
+  };
+
+  const handleSubmit = async (values: FormValues) => {
     try {
       await onSubmit(values);
       form.reset();
@@ -70,65 +138,128 @@ const AddModelModal = ({
         </DialogHeader>
 
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(handleSubmit)}
-            className="space-y-4"
-          >
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter model name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <Tabs defaultValue="manual" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="manual" className="flex items-center gap-2">
+                  <Key className="w-4 h-4" />
+                  Manual Entry
+                </TabsTrigger>
+                <TabsTrigger value="qr" className="flex items-center gap-2">
+                  <QrCode className="w-4 h-4" />
+                  Scan QR
+                </TabsTrigger>
+              </TabsList>
 
-            <FormField
-              control={form.control}
-              name="username"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Username</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter username or email" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <TabsContent value="manual" className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="totp_secret"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>TOTP Secret</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Enter TOTP secret key"
+                          {...field}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            handleSecretInput(e.target.value);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TabsContent>
 
-            <FormField
-              control={form.control}
-              name="code"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Code</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter authentication code" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <TabsContent value="qr" className="space-y-4">
+                <div className="relative aspect-square w-full max-w-[300px] mx-auto bg-muted rounded-lg overflow-hidden">
+                  <video ref={videoRef} className="w-full h-full object-cover" />
+                  {!scannerActive ? (
+                    <Button
+                      type="button"
+                      onClick={startScanner}
+                      className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+                    >
+                      Start Scanner
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      onClick={stopScanner}
+                      variant="secondary"
+                      className="absolute bottom-4 left-1/2 transform -translate-x-1/2"
+                    >
+                      Stop Scanner
+                    </Button>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
 
-            <FormField
-              control={form.control}
-              name="link"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Link (Optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter related URL" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="space-y-4 pt-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter model name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Username</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter username or email" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="code"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Generated Code</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Code will be generated from TOTP secret"
+                        {...field}
+                        readOnly
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="link"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Link (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter related URL" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>

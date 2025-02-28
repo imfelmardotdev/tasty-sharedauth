@@ -1,11 +1,28 @@
 import path from "path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
+
 // https://vitejs.dev/config/
 export default defineConfig({
   base: "/",
   optimizeDeps: {
     entries: ["src/main.tsx"],
+    include: [
+      'qr-scanner',
+      '@supabase/supabase-js',
+      'react-hook-form',
+      'zod',
+    ],
+  },
+  build: {
+    target: 'esnext',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'qr-scanner': ['qr-scanner'],
+        },
+      },
+    },
   },
   plugins: [
     react(),
@@ -22,7 +39,11 @@ export default defineConfig({
     strictPort: true, // Fail if port is already in use
     port: 5173,
     hmr: {
-      host: 'localhost'
+      host: 'localhost',
+      port: 5173,
+    },
+    watch: {
+      usePolling: true,
     },
   }
 });

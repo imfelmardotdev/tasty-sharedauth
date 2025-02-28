@@ -12,6 +12,7 @@ const mockModels = [
     code: "123456",
     link: "https://admin.google.com",
     created_at: new Date().toISOString(),
+    totp_secret: null,
   },
   {
     id: "2",
@@ -20,67 +21,41 @@ const mockModels = [
     code: "789012",
     link: "https://github.com/settings/security",
     created_at: new Date().toISOString(),
-  },
-  {
-    id: "3",
-    username: "aws-root",
-    name: "AWS Console",
-    code: "345678",
-    link: "https://console.aws.amazon.com",
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "4",
-    username: "slack-admin@company.com",
-    name: "Slack",
-    code: "901234",
-    link: "https://slack.com/admin",
-    created_at: new Date().toISOString(),
-  },
-];
-
-// Mock data for development
-const mockGroups = [
-  {
-    id: "1",
-    title: "Gmail Account",
-    description: "Google Workspace admin access",
-    created_at: new Date().toISOString(),
-    created_by: "1",
-    codes: [
-      {
-        id: "1",
-        group_id: "1",
-        code: "123456",
-        created_at: new Date().toISOString(),
-        expires_at: new Date(Date.now() + 300000).toISOString(),
-      },
-    ],
-    user_groups: [],
+    totp_secret: null,
   },
 ];
 
 // Model queries
 export const getModels = async () => {
   if (!supabase) return mockModels;
-  const { data, error } = await supabase
-    .from("models")
-    .select("*")
-    .order("created_at", { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from("models")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-  if (error) throw error;
-  return data as Model[];
+    if (error) throw error;
+    return data as Model[];
+  } catch (error) {
+    console.error("Error fetching models:", error);
+    return [];
+  }
 };
 
 export const createModel = async (model: Partial<Model>) => {
-  const { data, error } = await supabase
-    .from("models")
-    .insert(model)
-    .select()
-    .maybeSingle();
+  try {
+    const { data, error } = await supabase
+      .from("models")
+      .insert(model)
+      .select()
+      .single();
 
-  if (error) throw error;
-  return data as Model;
+    if (error) throw error;
+    return data as Model;
+  } catch (error) {
+    console.error("Error creating model:", error);
+    throw error;
+  }
 };
 
 // User queries
@@ -120,11 +95,7 @@ export const createUser = async (user: Partial<User>) => {
 // Group queries
 export const getGroups = async () => {
   if (!supabase) {
-    // Return mock data
-    return mockGroups as (Group & {
-      codes: Code[];
-      user_groups: UserGroup[];
-    })[];
+    return [];
   }
 
   const userId = localStorage.getItem("userId");
@@ -216,32 +187,6 @@ export const getGroups = async () => {
   return [];
 };
 
-// Helper function to add codes to groups
-const addCodesToGroups = async (groups: any[]) => {
-  const groupsWithCodes = await Promise.all(
-    groups.map(async (group) => {
-      const { data: codes, error: codesError } = await supabase
-        .from("codes")
-        .select("*")
-        .eq("group_id", group.id)
-        .order("created_at", { ascending: false });
-
-      if (codesError) throw codesError;
-
-      return {
-        ...group,
-        codes: codes || [],
-        user_groups: [],
-      };
-    }),
-  );
-
-  return groupsWithCodes as (Group & {
-    codes: Code[];
-    user_groups: UserGroup[];
-  })[];
-};
-
 export const createGroup = async (group: Partial<Group>) => {
   const { data, error } = await supabase
     .from("groups")
@@ -267,6 +212,54 @@ export const deleteGroup = async (id: string) => {
   }
 
   const { error } = await supabase.from("groups").delete().eq("id", id);
+
+  if (error) throw error;
+};
+
+// User Group queries
+export const getGroupMembers = async (groupId: string) => {
+  const { data, error } = await supabase
+    .from("user_groups")
+    .select(
+      `
+      users:users!inner (
+        id,
+        name,
+        email,
+        role,
+        created_at
+      )
+    `,
+    )
+    .eq("group_id", groupId)
+    .returns<{ users: User }[]>();
+
+  if (error) throw error;
+  return data.map((d) => d.users);
+};
+
+export const addUserToGroup = async (userGroup: Partial<UserGroup>) => {
+  try {
+    const { data, error } = await supabase
+      .from("user_groups")
+      .insert(userGroup)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as UserGroup;
+  } catch (error) {
+    console.error("Error adding user to group:", error);
+    throw error;
+  }
+};
+
+export const removeUserFromGroup = async (userId: string, groupId: string) => {
+  const { error } = await supabase
+    .from("user_groups")
+    .delete()
+    .eq("user_id", userId)
+    .eq("group_id", groupId);
 
   if (error) throw error;
 };
@@ -335,47 +328,4 @@ export const cleanExpiredCodes = async () => {
       console.error(`Error regenerating code ${code.id}:`, err);
     }
   }
-};
-
-// User Group queries
-export const getGroupMembers = async (groupId: string) => {
-  const { data, error } = await supabase
-    .from("user_groups")
-    .select(
-      `
-      users:users!inner (
-        id,
-        name,
-        email,
-        role,
-        created_at
-      )
-    `,
-    )
-    .eq("group_id", groupId)
-    .returns<{ users: User }[]>();
-
-  if (error) throw error;
-  return data.map((d) => d.users);
-};
-
-export const addUserToGroup = async (userGroup: Partial<UserGroup>) => {
-  const { data, error } = await supabase
-    .from("user_groups")
-    .insert(userGroup)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data as UserGroup;
-};
-
-export const removeUserFromGroup = async (userId: string, groupId: string) => {
-  const { error } = await supabase
-    .from("user_groups")
-    .delete()
-    .eq("user_id", userId)
-    .eq("group_id", groupId);
-
-  if (error) throw error;
 };
