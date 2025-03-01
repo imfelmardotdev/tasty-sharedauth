@@ -48,3 +48,16 @@ export interface Code {
   expires_at: string;
   secret?: string | null;
 }
+
+export interface SharedModelLink {
+  id: string;
+  model_id: string;
+  created_by: string;
+  access_token: string;
+  expires_at: string | null;
+  access_type: 'anyone' | 'restricted';
+  allowed_emails: string[] | null;
+  one_time_view: boolean;
+  views_count: number;
+  created_at: string;
+}

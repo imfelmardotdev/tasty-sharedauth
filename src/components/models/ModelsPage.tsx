@@ -8,7 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Copy } from "lucide-react";
+import { Plus, Pencil, Trash2, Share2 } from "lucide-react";
 import Header from "../dashboard/Header";
 import TOTPDisplay from "./TOTPDisplay";
 import Sidebar from "../layout/Sidebar";
@@ -19,6 +19,7 @@ import { getModels, createModel } from "@/lib/db/queries";
 import AddModelModal from "./AddModelModal";
 import EditModelModal from "./EditModelModal";
 import { formSchema, type FormValues, parseFormData } from "./schema";
+import ShareModelModal from "./ShareModelModal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +40,7 @@ const ModelsPage = () => {
   const [editingModel, setEditingModel] = useState<Model | null>(null);
   const [deleteModelId, setDeleteModelId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sharingModel, setSharingModel] = useState<Model | null>(null);
 
   const fetchModels = async () => {
     try {
@@ -308,6 +310,14 @@ const ModelsPage = () => {
                           variant="ghost"
                           size="icon"
                           className="hover:bg-slate-100"
+                          onClick={() => setSharingModel(model)}
+                        >
+                          <Share2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="hover:bg-slate-100"
                           onClick={() => setEditingModel(model)}
                         >
                           <Pencil className="h-4 w-4" />
@@ -367,6 +377,12 @@ const ModelsPage = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <ShareModelModal 
+          open={!!sharingModel}
+          onOpenChange={(open) => !open && setSharingModel(null)}
+          model={sharingModel || undefined}
+        />
       </main>
     </div>
   );

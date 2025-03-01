@@ -14,6 +14,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import SettingsPage from "./components/settings/SettingsPage";
 import SharedLinksPage from "./components/settings/SharedLinksPage";
 import SharedGroupView from "./components/shared/SharedGroupView";
+import SharedModelView from "./components/shared/SharedModelView";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 function App() {
@@ -107,6 +108,7 @@ function AppContent() {
                 }
               />
               <Route path="/share/:groupId" element={<SharedGroupView />} />
+              <Route path="/share/model/:id" element={<SharedModelView />} />
               <Route
                 path="/"
                 element={<Navigate to="/dashboard" replace />}

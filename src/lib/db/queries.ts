@@ -1,5 +1,5 @@
 import { supabase, supabaseAdmin } from "../supabase";
-import { User, Group, UserGroup, Code, Model } from "./types";
+import { User, Group, UserGroup, Code, Model, SharedModelLink } from "./types";
 import { type Role } from "@/lib/utils/roles";
 import { generateCode } from "@/lib/utils/2fa";
 
@@ -369,6 +369,75 @@ export const updateModelCode = async (id: string, code: string) => {
     return true;
   } catch (error) {
     console.error("Error updating model:", error);
+    return false;
+  }
+};
+
+// Shared Model Link queries
+export const getSharedModelLinks = async () => {
+  try {
+    const { data, error } = await supabase
+      .from("shared_model_links")
+      .select(`
+        *,
+        model:models(
+          id,
+          name,
+          username
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error("Error fetching shared model links:", error);
+    return [];
+  }
+};
+
+export const createSharedModelLink = async (link: Partial<SharedModelLink>) => {
+  try {
+    const { data, error } = await supabase
+      .from("shared_model_links")
+      .insert(link)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as SharedModelLink;
+  } catch (error) {
+    console.error("Error creating shared model link:", error);
+    throw error;
+  }
+};
+
+export const updateSharedModelLink = async (id: string, views: number) => {
+  try {
+    const { error } = await supabase
+      .from("shared_model_links")
+      .update({ views_count: views })
+      .eq("id", id);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error("Error updating shared model link:", error);
+    return false;
+  }
+};
+
+export const deleteSharedModelLink = async (id: string) => {
+  try {
+    const { error } = await supabase
+      .from("shared_model_links")
+      .delete()
+      .eq("id", id);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error("Error deleting shared model link:", error);
     return false;
   }
 };
