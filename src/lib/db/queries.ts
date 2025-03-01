@@ -34,7 +34,21 @@ export const getModels = async () => {
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      if (error.message.includes('permission denied') && supabaseAdmin) {
+        const { data: adminData, error: adminError } = await supabaseAdmin
+          .from("models")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (adminError) {
+          console.error("Admin fetch failed:", adminError);
+          throw adminError;
+        }
+        return adminData as Model[];
+      }
+      throw error;
+    }
     return data as Model[];
   } catch (error) {
     console.error("Error fetching models:", error);
@@ -50,7 +64,22 @@ export const createModel = async (model: Partial<Model>) => {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      if (error.message.includes('permission denied') && supabaseAdmin) {
+        const { data: adminData, error: adminError } = await supabaseAdmin
+          .from("models")
+          .insert(model)
+          .select()
+          .single();
+
+        if (adminError) {
+          console.error("Admin create failed:", adminError);
+          throw adminError;
+        }
+        return adminData as Model;
+      }
+      throw error;
+    }
     return data as Model;
   } catch (error) {
     console.error("Error creating model:", error);

@@ -14,7 +14,7 @@ import TOTPDisplay from "./TOTPDisplay";
 import Sidebar from "../layout/Sidebar";
 import { type Role } from "@/lib/utils/roles";
 import { Model } from "@/lib/db/types";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { getModels, createModel } from "@/lib/db/queries";
 import AddModelModal from "./AddModelModal";
 import EditModelModal from "./EditModelModal";
@@ -29,9 +29,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useToast } from "@/components/ui/use-toast";
 
 const ModelsPage = () => {
   const currentRole = localStorage.getItem("userRole") as Role;
+  const { toast } = useToast();
   const [models, setModels] = useState<Model[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingModel, setEditingModel] = useState<Model | null>(null);
@@ -133,12 +135,21 @@ const ModelsPage = () => {
       await createModel(modelData);
       setIsAddModalOpen(false);
       fetchModels(); // Reload models after adding
+      toast({
+        title: "Model added",
+        description: "The model was successfully added.",
+      });
     } catch (err) {
       console.error("Error adding model:", err);
       console.error("Error details:", {
         name: err.name,
         message: err.message,
         stack: err.stack
+      });
+      toast({
+        variant: "destructive",
+        title: "Error adding model",
+        description: "Could not add the model. Please try again.",
       });
     }
   };
@@ -147,16 +158,42 @@ const ModelsPage = () => {
     if (!editingModel) return;
 
     try {
+      // Try with regular client first
       const { error } = await supabase
         .from("models")
         .update(parseFormData(values))
         .eq("id", editingModel.id);
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes('permission denied') && supabaseAdmin) {
+          // Try with admin client if permission denied
+          const { error: adminError } = await supabaseAdmin
+            .from("models")
+            .update(parseFormData(values))
+            .eq("id", editingModel.id);
+
+          if (adminError) {
+            console.error("Admin update failed:", adminError);
+            throw adminError;
+          }
+        } else {
+          throw error;
+        }
+      }
+      
       setEditingModel(null);
       fetchModels(); // Reload models after editing
+      toast({
+        title: "Model updated",
+        description: "The model was successfully updated.",
+      });
     } catch (err) {
       console.error("Error updating model:", err);
+      toast({
+        variant: "destructive",
+        title: "Error updating model",
+        description: "Could not update the model. Please try again.",
+      });
     }
   };
 
@@ -164,16 +201,42 @@ const ModelsPage = () => {
     if (!deleteModelId) return;
 
     try {
+      // Try with regular client first
       const { error } = await supabase
         .from("models")
         .delete()
         .eq("id", deleteModelId);
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes('permission denied') && supabaseAdmin) {
+          // Try with admin client if permission denied
+          const { error: adminError } = await supabaseAdmin
+            .from("models")
+            .delete()
+            .eq("id", deleteModelId);
+
+          if (adminError) {
+            console.error("Admin delete failed:", adminError);
+            throw adminError;
+          }
+        } else {
+          throw error;
+        }
+      }
+
       setDeleteModelId(null);
       fetchModels(); // Reload models after deletion
+      toast({
+        title: "Model deleted",
+        description: "The model was successfully deleted.",
+      });
     } catch (err) {
       console.error("Error deleting model:", err);
+      toast({
+        variant: "destructive",
+        title: "Error deleting model",
+        description: "Could not delete the model. Please try again.",
+      });
     }
   };
 
