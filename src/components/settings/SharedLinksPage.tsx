@@ -494,8 +494,14 @@ const SharedLinksPage = () => {
                         variant="ghost"
                         size="icon"
                         className="hover:bg-red-100 text-red-500 hover:text-red-600"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setDeletingLink(link);
+                          setSelected({
+                            links: new Set([link.id]),
+                            groupCount: link.type === 'group' ? 1 : 0,
+                            modelCount: link.type === 'model' ? 1 : 0
+                          });
                           setShowDeleteDialog(true);
                         }}
                       >
@@ -524,7 +530,13 @@ const SharedLinksPage = () => {
               setDeletingLink(null);
             }
           }}
-          onConfirm={deletingLink ? () => handleSingleDelete(deletingLink) : handleBatchDelete}
+          onConfirm={async () => {
+            if (deletingLink) {
+              await handleSingleDelete(deletingLink);
+            } else {
+              await handleBatchDelete();
+            }
+          }}
           selectedCount={selected.links.size}
           groupCount={selected.groupCount}
           modelCount={selected.modelCount}
