@@ -1,7 +1,6 @@
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from './supabase';
 
 export async function checkAuthStatus() {
-  const supabase = createClientComponentClient();
   const { data: { session } } = await supabase.auth.getSession();
   const { data: { user } } = await supabase.auth.getUser();
   
@@ -13,8 +12,6 @@ export async function checkAuthStatus() {
 }
 
 export async function clearAllAuthData() {
-  const supabase = createClientComponentClient();
-  
   // Sign out from Supabase
   await supabase.auth.signOut();
   

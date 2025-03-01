@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { useRoutes, Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Home from "./components/home";
 import SignIn from "./components/auth/SignIn";
 import AuthGuard from "./components/auth/AuthGuard";
@@ -7,15 +7,17 @@ import TeamAccess from "./components/team/TeamAccess";
 import ModelsPage from "./components/models/ModelsPage";
 import GroupManagement from "./components/group/GroupManagement";
 import GroupsPage from "./components/group/GroupsPage";
-import DatabaseProvider from "@/contexts/DatabaseContext";
-import { GroupProvider } from "@/contexts/GroupContext";
-import ThemeProvider, { useTheme } from "@/contexts/ThemeContext";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { DatabaseProvider } from "./contexts/DatabaseContext";
+import { GroupProvider } from "./contexts/GroupContext";
+import ThemeProvider, { useTheme } from "./contexts/ThemeContext";
+import { AuthProvider } from "./contexts/AuthContext";
 import SettingsPage from "./components/settings/SettingsPage";
 import SharedLinksPage from "./components/settings/SharedLinksPage";
 import SharedGroupView from "./components/shared/SharedGroupView";
 import SharedModelView from "./components/shared/SharedModelView";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { Toaster } from "./components/ui/toaster";
+import LoadingScreen from "./components/LoadingScreen";
 
 function App() {
   return (
@@ -33,7 +35,7 @@ function AppContent() {
     <AuthProvider>
       <DatabaseProvider>
         <GroupProvider>
-        <Suspense fallback={<p>Loading...</p>}>
+        <Suspense fallback={<LoadingScreen />}>
           <div className={`min-h-screen bg-background text-foreground antialiased font-${font}`}>
            
             <Routes>
@@ -115,6 +117,7 @@ function AppContent() {
               />
             </Routes>
           </div>
+          <Toaster />
         </Suspense>
         </GroupProvider>
       </DatabaseProvider>

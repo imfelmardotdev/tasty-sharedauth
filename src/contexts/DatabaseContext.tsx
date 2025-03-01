@@ -15,7 +15,7 @@ const DatabaseContext = createContext<DatabaseContextType | undefined>(
   undefined,
 );
 
-export const DatabaseProvider = ({
+const DatabaseProvider = ({
   children,
 }: {
   children: React.ReactNode;
@@ -97,5 +97,4 @@ const useDatabase = () => {
   return context;
 };
 
-export { useDatabase };
-export default DatabaseProvider;
+export { useDatabase, DatabaseProvider };
