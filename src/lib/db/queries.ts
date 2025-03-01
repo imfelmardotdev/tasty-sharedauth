@@ -442,6 +442,81 @@ export const deleteSharedModelLink = async (id: string) => {
   }
 };
 
+interface DeleteSharesResult {
+  success: boolean;
+  deletedCount: number;
+  errors: string[];
+}
+
+export const deleteShare = async (type: 'group' | 'model', id: string): Promise<boolean> => {
+  try {
+    const table = type === 'group' ? 'shared_links' : 'shared_model_links';
+    console.log(`Deleting ${type} share with ID:`, id);
+    console.log(`Using table:`, table);
+
+    const { error } = await supabase
+      .from(table)
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error(`Error deleting ${type} share:`, error);
+      throw error;
+    }
+
+    console.log(`Successfully deleted ${type} share`);
+    return true;
+  } catch (err) {
+    console.error(`Failed to delete ${type} share:`, err);
+    return false;
+  }
+};
+
+export const deleteManyShares = async (shares: {
+  type: 'group' | 'model';
+  ids: string[];
+}[]): Promise<DeleteSharesResult> => {
+  console.log('Starting batch delete with shares:', shares);
+  
+  const results = {
+    success: true,
+    deletedCount: 0,
+    errors: [] as string[]
+  };
+
+  for (const { type, ids } of shares) {
+    try {
+      console.log(`Processing ${type} shares:`, ids);
+      
+      if (!ids.length) continue;
+      
+      const table = type === 'group' ? 'shared_links' : 'shared_model_links';
+      console.log(`Using table:`, table);
+
+      const { error } = await supabase
+        .from(table)
+        .delete()
+        .in('id', ids);
+      
+      if (error) {
+        console.error(`Error deleting ${type} shares:`, error);
+        results.success = false;
+        results.errors.push(`Failed to delete ${type} shares: ${error.message}`);
+      } else {
+        console.log(`Successfully deleted ${ids.length} ${type} shares`);
+        results.deletedCount += ids.length;
+      }
+    } catch (err) {
+      console.error(`Error in batch delete for ${type}:`, err);
+      results.success = false;
+      results.errors.push(`Unexpected error deleting ${type} shares: ${err.message}`);
+    }
+  }
+
+  console.log('Batch delete completed with results:', results);
+  return results;
+};
+
 export const cleanExpiredCodes = async () => {
   // Get expired codes before deleting them
   const { data: expiredCodes, error: fetchError } = await supabase

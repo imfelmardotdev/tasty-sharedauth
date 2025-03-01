@@ -9,37 +9,17 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Copy, ExternalLink, Trash2 } from "lucide-react";
+import { Copy, ExternalLink, Trash2, CheckSquare, Square } from "lucide-react";
 import Header from "../dashboard/Header";
 import Sidebar from "../layout/Sidebar";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/ui/use-toast";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import DeleteLinksDialog from "./DeleteLinksDialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { deleteShare, deleteManyShares } from "@/lib/db/queries";
 
-interface UserMetadata {
-  name?: string;
-  [key: string]: any;
-}
-
-interface User {
+interface SharedLinkBase {
   id: string;
-  email: string;
-  raw_user_meta_data: UserMetadata;
-}
-
-interface SharedLinkData {
-  id: string;
-  group_id: string;
-  code_id?: string;
   created_by: string;
   access_token: string;
   expires_at: string | null;
@@ -47,91 +27,154 @@ interface SharedLinkData {
   one_time_view: boolean;
   created_at: string;
   views_count: number;
-  group: {
-    title: string;
-  };
-}
-
-interface SharedLink extends SharedLinkData {
-  user: {
+  user?: {
     name: string;
     email: string;
   };
 }
 
+interface SharedGroupLink extends SharedLinkBase {
+  type: 'group';
+  group_id: string;
+  group: {
+    title: string;
+  };
+}
+
+interface SharedModelLink extends SharedLinkBase {
+  type: 'model';
+  model_id: string;
+  model: {
+    name: string;
+    username: string;
+  };
+}
+
+type SharedLink = SharedGroupLink | SharedModelLink;
+
+interface Selected {
+  links: Set<string>;
+  groupCount: number;
+  modelCount: number;
+}
+
 const SharedLinksPage = () => {
   const currentRole = localStorage.getItem("userRole") as "Admin" | "Manager" | "User";
   const [sharedLinks, setSharedLinks] = useState<SharedLink[]>([]);
-  const [deletingLinkId, setDeletingLinkId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deletingLink, setDeletingLink] = useState<SharedLink | null>(null);
+  const [selected, setSelected] = useState<Selected>({
+    links: new Set(),
+    groupCount: 0,
+    modelCount: 0
+  });
   const { toast } = useToast();
 
   const fetchSharedLinks = async () => {
     try {
-      // First get the shared links with group info
-      // First, get all shared links
-      const { data: linksData, error: linksError } = await supabase
+      // Fetch group shares
+      const { data: linkData, error: linkError } = await supabase
         .from("shared_links")
-        .select()
+        .select("*")
         .order("created_at", { ascending: false });
 
-      if (linksError) throw linksError;
-      if (!linksData) return;
+      if (linkError) throw linkError;
 
-      // Get all unique group IDs
-      const groupIds = [...new Set(linksData.map(link => link.group_id))];
-
-      // Fetch group data
-      const { data: groupsData, error: groupsError } = await supabase
-        .from("groups")
-        .select("id, title")
-        .in("id", groupIds);
+      // Fetch groups for those links
+      const groupIds = [...new Set((linkData || []).map(link => link.group_id))];
+      const { data: groupsData, error: groupsError } = groupIds.length > 0 
+        ? await supabase
+            .from("groups")
+            .select("id, title")
+            .in("id", groupIds)
+        : { data: [], error: null };
 
       if (groupsError) throw groupsError;
 
-      // Create a map of group data
-      const groupMap = new Map(
+      // Create groups lookup map
+      const groupsMap = new Map(
         (groupsData || []).map(group => [group.id, group])
       );
 
-      // Transform the links data to include group info
-      const linksWithGroups = linksData.map(link => ({
-        ...link,
-        group: {
-          title: groupMap.get(link.group_id)?.title || 'Unknown Group'
-        }
-      }));
+      // Fetch model shares
+      const { data: modelLinkData, error: modelLinkError } = await supabase
+        .from("shared_model_links")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-      if (linksError) throw linksError;
-      if (!linksData) return;
+      if (modelLinkError) throw modelLinkError;
 
-      // Then get user details for all creators from users
-      const userIds = [...new Set(linksData.map(link => link.created_by))];
-      const { data: usersData, error: usersError } = await supabase
-        .from('users')
-        .select('id, email, name')
-        .in('id', userIds);
+      // Fetch models for those links
+      const modelIds = [...new Set((modelLinkData || []).map(link => link.model_id))];
+      const { data: modelsData, error: modelsError } = modelIds.length > 0
+        ? await supabase
+            .from("models")
+            .select("id, name, username")
+            .in("id", modelIds)
+        : { data: [], error: null };
+
+      if (modelsError) throw modelsError;
+
+      // Create models lookup map
+      const modelsMap = new Map(
+        (modelsData || []).map(model => [model.id, model])
+      );
+
+      // Get all unique user IDs from both types of links
+      const userIds = [...new Set([
+        ...(linkData || []).map(link => link.created_by),
+        ...(modelLinkData || []).map(link => link.created_by)
+      ])];
+
+      // Fetch user details
+      const { data: usersData, error: usersError } = userIds.length > 0
+        ? await supabase
+            .from('users')
+            .select('id, email, name')
+            .in('id', userIds)
+        : { data: [], error: null };
 
       if (usersError) throw usersError;
 
-      // Map users to their IDs for easy lookup
+      // Create user lookup map
       const userMap = new Map(
         (usersData || []).map(user => [user.id, user])
       );
 
-      // Transform the data to include user details
-      const transformedData = linksData.map(link => {
-        const user = userMap.get(link.created_by);
-        return {
-          ...link,
-          user: {
-            email: user?.email || 'Unknown',
-            name: user?.name || user?.email?.split('@')[0] || 'Unknown'
-          }
-        };
-      });
+      // Transform group links
+      const transformedGroupLinks: SharedLink[] = (linkData || []).map(link => ({
+        ...link,
+        type: 'group' as const,
+        group: groupsMap.get(link.group_id) || { title: 'Unknown Group', id: link.group_id },
+        user: {
+          email: userMap.get(link.created_by)?.email || 'Unknown',
+          name: userMap.get(link.created_by)?.name || userMap.get(link.created_by)?.email?.split('@')[0] || 'Unknown'
+        }
+      }));
 
-      setSharedLinks(transformedData);
+      // Transform model links
+      const transformedModelLinks: SharedLink[] = (modelLinkData || []).map(link => ({
+        ...link,
+        type: 'model' as const,
+        model: modelsMap.get(link.model_id) || { name: 'Unknown Model', id: link.model_id, username: 'unknown' },
+        user: {
+          email: userMap.get(link.created_by)?.email || 'Unknown',
+          name: userMap.get(link.created_by)?.name || userMap.get(link.created_by)?.email?.split('@')[0] || 'Unknown'
+        }
+      }));
+
+      // Combine and sort by creation date
+      const combined = [...transformedGroupLinks, ...transformedModelLinks]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      setSharedLinks(combined);
+      // Clear selection when links are refreshed
+      setSelected({
+        links: new Set(),
+        groupCount: 0,
+        modelCount: 0
+      });
     } catch (err) {
       console.error("Error fetching shared links:", err);
       toast({
@@ -147,8 +190,8 @@ const SharedLinksPage = () => {
   useEffect(() => {
     fetchSharedLinks();
 
-    // Set up realtime subscription
-    const channel = supabase
+    // Set up realtime subscriptions for both tables
+    const groupChannel = supabase
       .channel("shared-links-changes")
       .on(
         "postgres_changes",
@@ -161,13 +204,30 @@ const SharedLinksPage = () => {
       )
       .subscribe();
 
+    const modelChannel = supabase
+      .channel("shared-model-links-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "shared_model_links",
+        },
+        () => fetchSharedLinks()
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(groupChannel);
+      supabase.removeChannel(modelChannel);
     };
   }, []);
 
   const handleCopyLink = async (link: SharedLink) => {
-    const url = `${window.location.origin}/share/${link.group_id}${link.code_id ? `/${link.code_id}` : ''}?token=${link.access_token}`;
+    const url = link.type === 'group'
+      ? `${window.location.origin}/share/${link.group_id}?token=${link.access_token}`
+      : `${window.location.origin}/share/model/${link.model_id}?token=${link.access_token}`;
+    
     try {
       await navigator.clipboard.writeText(url);
       toast({
@@ -185,49 +245,132 @@ const SharedLinksPage = () => {
   };
 
   const handleOpenLink = (link: SharedLink) => {
-    const url = `${window.location.origin}/share/${link.group_id}${link.code_id ? `/${link.code_id}` : ''}?token=${link.access_token}`;
+    const url = link.type === 'group'
+      ? `${window.location.origin}/share/${link.group_id}?token=${link.access_token}`
+      : `${window.location.origin}/share/model/${link.model_id}?token=${link.access_token}`;
+    
     window.open(url, '_blank');
   };
 
-  const handleDeleteLink = async () => {
-    if (!deletingLinkId) return;
-
+  const handleSingleDelete = async (link: SharedLink) => {
     try {
-      console.log('Attempting to delete link:', deletingLinkId);
+      console.log('Deleting single link:', link);
+      const result = await deleteShare(link.type, link.id);
       
-      // Delete directly with proper policy
-      const { error } = await supabase
-        .from("shared_links")
-        .delete()
-        .eq("id", deletingLinkId)
-        .throwOnError(); // Force error if delete fails
-
-      console.log('Delete response:', error ? 'Error' : 'Success');
-
-      if (error) throw error;
-
-      // Wait a moment for the delete to propagate
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Update UI
-      setSharedLinks(current => 
-        current.filter(link => link.id !== deletingLinkId)
-      );
-
-      toast({
-        title: "Success",
-        description: "Link has been deleted"
-      });
+      if (result) {
+        toast({
+          title: "Success",
+          description: "Share link deleted successfully"
+        });
+        await fetchSharedLinks();
+      } else {
+        throw new Error("Failed to delete share link");
+      }
     } catch (err) {
       console.error("Failed to delete link:", err);
       toast({
         title: "Error",
-        description: "Failed to delete the link",
+        description: err instanceof Error ? err.message : "Failed to delete the share link",
         variant: "destructive"
       });
     } finally {
-      setDeletingLinkId(null);
+      setShowDeleteDialog(false);
+      setDeletingLink(null);
     }
+  };
+
+  const handleBatchDelete = async () => {
+    if (selected.links.size === 0) return;
+
+    try {
+      const groupLinks: string[] = [];
+      const modelLinks: string[] = [];
+      
+      sharedLinks.forEach(link => {
+        if (selected.links.has(link.id)) {
+          if (link.type === 'group') {
+            groupLinks.push(link.id);
+          } else {
+            modelLinks.push(link.id);
+          }
+        }
+      });
+
+      const shares = [];
+      if (groupLinks.length > 0) shares.push({ type: 'group' as const, ids: groupLinks });
+      if (modelLinks.length > 0) shares.push({ type: 'model' as const, ids: modelLinks });
+
+      console.log('Deleting multiple links:', shares);
+      const result = await deleteManyShares(shares);
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: `Successfully deleted ${result.deletedCount} shared ${result.deletedCount === 1 ? 'link' : 'links'}`
+        });
+        await fetchSharedLinks();
+      } else {
+        throw new Error(result.errors.join('\n'));
+      }
+    } catch (err) {
+      console.error("Failed to delete links:", err);
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to delete the selected links",
+        variant: "destructive"
+      });
+    } finally {
+      setShowDeleteDialog(false);
+      setDeletingLink(null);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selected.links.size === sharedLinks.length) {
+      // Deselect all
+      setSelected({
+        links: new Set(),
+        groupCount: 0,
+        modelCount: 0
+      });
+    } else {
+      // Select all
+      const newLinks = new Set(sharedLinks.map(link => link.id));
+      const counts = sharedLinks.reduce(
+        (acc, link) => {
+          if (link.type === 'group') acc.groupCount++;
+          else acc.modelCount++;
+          return acc;
+        },
+        { groupCount: 0, modelCount: 0 }
+      );
+      
+      setSelected({
+        links: newLinks,
+        ...counts
+      });
+    }
+  };
+
+  const toggleSelect = (link: SharedLink) => {
+    const newLinks = new Set(selected.links);
+    let { groupCount, modelCount } = selected;
+
+    if (newLinks.has(link.id)) {
+      newLinks.delete(link.id);
+      if (link.type === 'group') groupCount--;
+      else modelCount--;
+    } else {
+      newLinks.add(link.id);
+      if (link.type === 'group') groupCount++;
+      else modelCount++;
+    }
+
+    setSelected({
+      links: newLinks,
+      groupCount,
+      modelCount
+    });
   };
 
   if (currentRole !== "Admin") {
@@ -241,13 +384,35 @@ const SharedLinksPage = () => {
 
       <main className="flex-1 ml-64 pt-16 px-4 container mx-auto max-w-7xl">
         <div className="p-6 space-y-6">
-          <h2 className="text-2xl font-semibold">Shared Links</h2>
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-semibold">Shared Links</h2>
+            {selected.links.size > 0 && (
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  setDeletingLink(null);
+                  setShowDeleteDialog(true);
+                }}
+                className="flex items-center gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete Selected ({selected.links.size})
+              </Button>
+            )}
+          </div>
 
           <div className="border rounded-lg bg-card">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Group</TableHead>
+                  <TableHead className="w-[40px]">
+                    <Checkbox
+                      checked={selected.links.size === sharedLinks.length && sharedLinks.length > 0}
+                      onClick={toggleSelectAll}
+                    />
+                  </TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Name</TableHead>
                   <TableHead>Share Link</TableHead>
                   <TableHead>Created By</TableHead>
                   <TableHead>Access Type</TableHead>
@@ -260,7 +425,22 @@ const SharedLinksPage = () => {
               <TableBody>
                 {sharedLinks.map((link) => (
                   <TableRow key={link.id}>
-                    <TableCell>{link.group?.title}</TableCell>
+                    <TableCell>
+                      <Checkbox
+                        checked={selected.links.has(link.id)}
+                        onClick={() => toggleSelect(link)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={link.type === 'group' ? 'default' : 'secondary'}>
+                        {link.type === 'group' ? 'Group' : 'Model'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {link.type === 'group' 
+                        ? link.group.title
+                        : link.model.name}
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Button
@@ -314,7 +494,10 @@ const SharedLinksPage = () => {
                         variant="ghost"
                         size="icon"
                         className="hover:bg-red-100 text-red-500 hover:text-red-600"
-                        onClick={() => setDeletingLinkId(link.id)}
+                        onClick={() => {
+                          setDeletingLink(link);
+                          setShowDeleteDialog(true);
+                        }}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -323,7 +506,7 @@ const SharedLinksPage = () => {
                 ))}
                 {!loading && sharedLinks.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                       No shared links found
                     </TableCell>
                   </TableRow>
@@ -333,28 +516,21 @@ const SharedLinksPage = () => {
           </div>
         </div>
 
-        <AlertDialog
-          open={!!deletingLinkId}
-          onOpenChange={(open) => !open && setDeletingLinkId(null)}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will permanently delete the shared link and revoke access for anyone using it.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-red-500 hover:bg-red-600"
-                onClick={handleDeleteLink}
-              >
-                Delete Link
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <DeleteLinksDialog
+          open={showDeleteDialog}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowDeleteDialog(false);
+              setDeletingLink(null);
+            }
+          }}
+          onConfirm={deletingLink ? () => handleSingleDelete(deletingLink) : handleBatchDelete}
+          selectedCount={selected.links.size}
+          groupCount={selected.groupCount}
+          modelCount={selected.modelCount}
+          isSingleDelete={!!deletingLink}
+          itemType={deletingLink?.type}
+        />
       </main>
     </div>
   );
