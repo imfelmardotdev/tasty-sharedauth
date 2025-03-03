@@ -64,24 +64,17 @@ const EditModelModal = ({
   }, [model.totp_secret]);
 
   const handleSecretInput = async (secret: string) => {
+    if (!secret.trim()) return;
+
     try {
-      const cleanedSecret = secret.replace(/\s+/g, "").toUpperCase();
-      if (/^[A-Z2-7]+=*$/.test(cleanedSecret)) {
-        const code = await generateTOTP(cleanedSecret);
-        form.setValue("code", code);
-        form.setValue("totp_secret", cleanedSecret);
-      } else if (cleanedSecret) {
-        toast({
-          title: "Invalid Secret",
-          description: "The secret key must be a valid base32 string.",
-          variant: "destructive",
-        });
-      }
+      const code = await generateTOTP(secret);
+      form.setValue("code", code);
+      form.setValue("totp_secret", secret);
     } catch (error) {
-      console.error("Invalid TOTP secret:", error);
+      console.error("TOTP generation error:", error);
       toast({
-        title: "Error",
-        description: "Failed to generate code. Please check your secret key.",
+        title: "Invalid Secret",
+        description: "The secret key format is not valid or supported. Please check your input.",
         variant: "destructive",
       });
     }

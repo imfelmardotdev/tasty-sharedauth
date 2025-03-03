@@ -112,32 +112,21 @@ const AddCodeModal = ({
   };
 
   const handleSecretInput = async (secret: string) => {
-    try {
-      // Remove spaces and convert to uppercase for better compatibility
-      const cleanedSecret = secret.replace(/\s+/g, "").toUpperCase();
+    if (!secret.trim()) return;
 
-      // Validate the secret format (base32 string)
-      if (/^[A-Z2-7]+=*$/.test(cleanedSecret)) {
-        const code = await generateTOTP(cleanedSecret);
-        form.setValue("code", code);
-        form.setValue("secret", cleanedSecret);
-        // Also set the name if it's empty
-        if (!form.getValues("name")) {
-          form.setValue("name", "TOTP Code");
-        }
-      } else if (cleanedSecret) {
-        toast({
-          title: "Invalid Secret",
-          description: "The secret key must be a valid base32 string.",
-          variant: "destructive",
-        });
+    try {
+      const code = await generateTOTP(secret);
+      form.setValue("code", code);
+      form.setValue("secret", secret);
+      // Also set the name if it's empty
+      if (!form.getValues("name")) {
+        form.setValue("name", "TOTP Code");
       }
     } catch (error) {
-      console.error("Invalid TOTP secret:", error);
+      console.error("TOTP generation error:", error);
       toast({
-        title: "Error",
-        description:
-          "Failed to generate TOTP code. Please check your secret key.",
+        title: "Invalid Secret",
+        description: "The secret key format is not valid or supported. Please check your input.",
         variant: "destructive",
       });
     }

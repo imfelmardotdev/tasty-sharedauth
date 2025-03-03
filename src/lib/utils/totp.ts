@@ -1,10 +1,34 @@
 // Use Web Crypto API for browser environment
 const textEncoder = new TextEncoder();
 
-// Convert base32 to bytes
+// Format detection
+function isHexFormat(str: string): boolean {
+  return /^[0-9A-Fa-f]+$/.test(str);
+}
+
+function isBase32Format(str: string): boolean {
+  return /^[A-Za-z2-7]+=*$/.test(str);
+}
+
+// Convert hex to bytes
+function hexToBytes(hex: string): Uint8Array {
+  const bytes = new Uint8Array(Math.floor(hex.length / 2));
+  for (let i = 0; i < bytes.length; i++) {
+    bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+  }
+  return bytes;
+}
+
+// Convert ASCII to bytes
+function asciiToBytes(str: string): Uint8Array {
+  return textEncoder.encode(str);
+}
+
+// Convert base32 to bytes with improved handling
 function base32ToBytes(base32: string): Uint8Array {
   const base32chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  const cleanedInput = base32.toUpperCase().replace(/[^A-Z2-7]/g, "");
+  // Clean the input but preserve case temporarily
+  const cleanedInput = base32.replace(/[^A-Za-z2-7]/g, "");
   const length = Math.floor((cleanedInput.length * 5) / 8);
   const result = new Uint8Array(length);
 
@@ -13,7 +37,8 @@ function base32ToBytes(base32: string): Uint8Array {
   let byteIndex = 0;
 
   for (let i = 0; i < cleanedInput.length; i++) {
-    const val = base32chars.indexOf(cleanedInput[i]);
+    // Case-insensitive lookup
+    const val = base32chars.indexOf(cleanedInput[i].toUpperCase());
     if (val === -1) continue;
 
     currentByte = (currentByte << 5) | val;
@@ -26,6 +51,27 @@ function base32ToBytes(base32: string): Uint8Array {
   }
 
   return result;
+}
+
+// Normalize secret key to bytes
+function normalizeSecret(secret: string): Uint8Array {
+  if (!secret) {
+    throw new Error("Secret key cannot be empty");
+  }
+
+  // Remove whitespace and special characters
+  const cleaned = secret.replace(/[\s-]/g, "");
+  
+  if (isHexFormat(cleaned)) {
+    return hexToBytes(cleaned);
+  }
+  
+  if (isBase32Format(cleaned)) {
+    return base32ToBytes(cleaned);
+  }
+  
+  // Default to treating as ASCII text
+  return asciiToBytes(cleaned);
 }
 
 // HMAC-based One-time Password (HOTP) calculation
@@ -66,14 +112,8 @@ export async function generateTOTP(
   window = 30,
 ): Promise<string> {
   try {
-    // Clean and validate the secret
-    const cleanSecret = secret.replace(/\s+/g, "").toUpperCase();
-    if (!/^[A-Z2-7]+=*$/.test(cleanSecret)) {
-      throw new Error("Invalid base32 secret");
-    }
-
-    // Convert base32 secret to bytes
-    const secretBytes = base32ToBytes(cleanSecret);
+    // Normalize and convert secret to bytes
+    const secretBytes = normalizeSecret(secret);
 
     // Calculate counter based on current time
     const counter = Math.floor(Date.now() / 1000 / window);
