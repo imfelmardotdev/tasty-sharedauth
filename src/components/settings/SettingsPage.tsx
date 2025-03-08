@@ -34,54 +34,57 @@ const SettingsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex">
-      <Sidebar currentRole={currentRole} />
+    <div className="min-h-screen bg-background flex relative">
+      <div className="hidden md:block">
+        <Sidebar currentRole={currentRole} />
+      </div>
       <Header currentRole={currentRole} />
 
-      <main className="flex-1 ml-64 pt-16 px-4 container mx-auto max-w-7xl">
-        <div className="p-6 space-y-6">
-          <h2 className="text-2xl font-semibold">Settings</h2>
-
-          <Card className="bg-card">
-            <CardHeader>
-              <CardTitle>Appearance</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div 
-                className="flex items-center justify-between rounded-lg p-2 hover:bg-accent/50 transition-colors"
-                role="group"
-                aria-labelledby="dark-mode-label"
-              >
-                <div className="flex items-center space-x-4" id="dark-mode-label">
-                  {mode === "dark" ? (
-                    <Moon className="w-5 h-5" />
-                  ) : (
-                    <Sun className="w-5 h-5" />
-                  )}
-                  <Label htmlFor="theme-toggle">Dark Mode</Label>
+      <main className="flex-1 md:ml-64 pt-16 px-4 container mx-auto max-w-7xl">
+        <div className="py-6">
+          <h2 className="text-2xl font-semibold mb-6">Settings</h2>
+          
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {/* Dark Mode Card */}
+            <Card className="col-span-1">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Display Mode</CardTitle>
+                {mode === "dark" ? (
+                  <Moon className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <Sun className="h-4 w-4 text-muted-foreground" />
+                )}
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium leading-none">Dark Mode</p>
+                    <p className="text-sm text-muted-foreground">
+                      Toggle between light and dark themes
+                    </p>
+                  </div>
+                  <Switch
+                    checked={mode === "dark"}
+                    onCheckedChange={toggleMode}
+                  />
                 </div>
-                <Switch
-                  id="theme-toggle"
-                  checked={mode === "dark"}
-                  onCheckedChange={toggleMode}
-                />
-              </div>
+              </CardContent>
+            </Card>
 
-              <div className="space-y-4">
-                <div className="flex items-center space-x-4">
-                  <Palette className="w-5 h-5" />
-                  <Label>Color Theme</Label>
-                </div>
+            {/* Color Theme Card */}
+            <Card className="col-span-1">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Theme Colors</CardTitle>
+                <Palette className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
                 <RadioGroup
                   value={color}
-                  onValueChange={(value: any) => setThemeColor(value)}
-                  className="grid grid-cols-5 gap-4"
+                  onValueChange={setThemeColor}
+                  className="grid grid-cols-5 gap-2"
                 >
                   {themes.map((theme) => (
-                    <div
-                      key={theme.value}
-                      className="flex flex-col items-center gap-2"
-                    >
+                    <div key={theme.value} className="relative">
                       <RadioGroupItem
                         value={theme.value}
                         id={theme.value}
@@ -89,33 +92,37 @@ const SettingsPage = () => {
                       />
                       <Label
                         htmlFor={theme.value}
-                        className="flex flex-col items-center gap-2 rounded-md p-2 hover:bg-accent peer-data-[state=checked]:border-2 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-accent/50 cursor-pointer transition-all duration-200 relative"
+                        className="flex flex-col items-center justify-center rounded-md border-2 p-2 hover:border-primary peer-data-[state=checked]:border-primary cursor-pointer transition-all"
                       >
                         <div
-                          className={`w-8 h-8 rounded-full ${theme.bg} ring-2 ring-border shadow-lg transition-transform hover:scale-110 peer-data-[state=checked]:ring-primary`}
+                          className={`w-6 h-6 rounded-full ${theme.bg} ring-1 ring-border peer-data-[state=checked]:ring-primary`}
                         />
-                        <span className="text-sm">{theme.label}</span>
                       </Label>
                     </div>
                   ))}
                 </RadioGroup>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center space-x-4">
-                  <Type className="w-5 h-5" />
-                  <Label>Font Style</Label>
+                <div className="mt-2">
+                  <p className="text-sm text-muted-foreground">
+                    Selected: {themes.find(t => t.value === color)?.label}
+                  </p>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Font Style Card */}
+            <Card className="col-span-1">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Typography</CardTitle>
+                <Type className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
                 <RadioGroup
                   value={font}
-                  onValueChange={(value: any) => setFont(value)}
-                  className="grid grid-cols-3 gap-4"
+                  onValueChange={setFont}
+                  className="space-y-2"
                 >
                   {fonts.map((fontOption) => (
-                    <div
-                      key={fontOption.value}
-                      className="flex flex-col items-center gap-2"
-                    >
+                    <div key={fontOption.value} className="relative">
                       <RadioGroupItem
                         value={fontOption.value}
                         id={fontOption.value}
@@ -123,20 +130,24 @@ const SettingsPage = () => {
                       />
                       <Label
                         htmlFor={fontOption.value}
-                        className="flex flex-col items-center gap-2 rounded-md p-2 hover:bg-accent peer-data-[state=checked]:border-2 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-accent/50 cursor-pointer transition-all duration-200 relative w-full text-center"
+                        className="flex items-center justify-between rounded-md border-2 p-2 hover:border-primary peer-data-[state=checked]:border-primary cursor-pointer transition-all w-full"
                       >
                         <span className={`text-sm ${fontOption.className}`}>
                           {fontOption.label}
-                          {fontOption.value === "orbitron" && " (Default)"}
-                          {font === fontOption.value && " (Current)"}
                         </span>
+                        {(fontOption.value === "orbitron" || font === fontOption.value) && (
+                          <span className="text-xs text-muted-foreground">
+                            {fontOption.value === "orbitron" && "Default"}
+                            {font === fontOption.value && "Current"}
+                          </span>
+                        )}
                       </Label>
                     </div>
                   ))}
                 </RadioGroup>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </main>
     </div>
