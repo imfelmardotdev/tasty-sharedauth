@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
 import Header from "../dashboard/Header";
 import Sidebar from "../layout/Sidebar";
@@ -28,25 +28,33 @@ const SettingsPage = () => {
     | "Admin"
     | "Manager"
     | "User";
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   if (currentRole !== "Admin") {
     return <div>Access denied</div>;
   }
 
+  const toggleMobileSidebar = () => setIsMobileSidebarOpen(prev => !prev);
+
   return (
     <div className="min-h-screen bg-background flex relative">
-      <div className="hidden md:block">
-        <Sidebar currentRole={currentRole} />
-      </div>
-      <Header currentRole={currentRole} />
+      <Sidebar 
+        currentRole={currentRole}
+        isMobileSidebarOpen={isMobileSidebarOpen}
+        toggleMobileSidebar={toggleMobileSidebar}
+      />
+      <Header 
+        currentRole={currentRole} 
+        toggleMobileSidebar={toggleMobileSidebar}
+      />
 
       <main className="flex-1 md:ml-64 pt-16 px-4 container mx-auto max-w-7xl">
         <div className="py-6">
-          <h2 className="text-2xl font-semibold mb-6">Settings</h2>
+          <h2 className="text-2xl font-semibold mb-4">Settings</h2>
           
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {/* Dark Mode Card */}
-            <Card className="col-span-1">
+            <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Display Mode</CardTitle>
                 {mode === "dark" ? (
@@ -55,7 +63,7 @@ const SettingsPage = () => {
                   <Sun className="h-4 w-4 text-muted-foreground" />
                 )}
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-2">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
                     <p className="text-sm font-medium leading-none">Dark Mode</p>
@@ -72,16 +80,16 @@ const SettingsPage = () => {
             </Card>
 
             {/* Color Theme Card */}
-            <Card className="col-span-1">
+            <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Theme Colors</CardTitle>
                 <Palette className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-2">
                 <RadioGroup
                   value={color}
                   onValueChange={setThemeColor}
-                  className="grid grid-cols-5 gap-2"
+                  className="grid grid-cols-3 gap-3"
                 >
                   {themes.map((theme) => (
                     <div key={theme.value} className="relative">
@@ -110,12 +118,12 @@ const SettingsPage = () => {
             </Card>
 
             {/* Font Style Card */}
-            <Card className="col-span-1">
+            <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Typography</CardTitle>
                 <Type className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-2">
                 <RadioGroup
                   value={font}
                   onValueChange={setFont}

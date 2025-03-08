@@ -268,7 +268,80 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => 
             )}
           </div>
 
-          <div className="border rounded-lg bg-card overflow-x-auto -mx-3 sm:mx-0">
+          {/* Mobile View */}
+          <div className="block lg:hidden space-y-4">
+            {members.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No team members found
+              </div>
+            ) : (
+              members.map((member: User) => (
+                <div key={member.id} className="border rounded-lg p-4 space-y-4 bg-card">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-medium text-lg">{member.name}</h3>
+                      <p className="text-sm text-muted-foreground">{member.email}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      {canManageMember(role, member.role) && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="hover:bg-slate-100"
+                          onClick={() => setEditingMember(member)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {canDeleteMember(role, member.role) && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="hover:bg-red-100 text-red-500 hover:text-red-600"
+                          onClick={() => setDeletingMember(member.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-muted-foreground block">Role</span>
+                      <Badge
+                        variant={member.role === "Admin" ? "default" : "secondary"}
+                        className="mt-1"
+                      >
+                        {member.role}
+                      </Badge>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground block">Groups</span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {member.groupNames && member.groupNames.length > 0 ? (
+                          member.groupNames.map(groupName => (
+                            <Badge 
+                              key={groupName} 
+                              variant="outline"
+                              className="bg-slate-100"
+                            >
+                              {groupName}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-gray-500 text-sm">No Groups</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop View */}
+          <div className="hidden lg:block border rounded-lg bg-card overflow-x-auto -mx-3 sm:mx-0">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -319,28 +392,26 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => 
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <div className="flex justify-end gap-2">
-                            {canManageMember(role, member.role) && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="hover:bg-slate-100"
-                                onClick={() => setEditingMember(member)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {canDeleteMember(role, member.role) && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="hover:bg-red-100 text-red-500 hover:text-red-600"
-                                onClick={() => setDeletingMember(member.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
+                          {canManageMember(role, member.role) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="hover:bg-slate-100"
+                              onClick={() => setEditingMember(member)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {canDeleteMember(role, member.role) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="hover:bg-red-100 text-red-500 hover:text-red-600"
+                              onClick={() => setDeletingMember(member.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

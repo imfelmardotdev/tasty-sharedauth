@@ -455,7 +455,126 @@ const SharedLinksPage = () => {
               </div>
             </div>
 
-            <div className="border rounded-lg bg-card overflow-x-auto -mx-3 sm:mx-0">
+            {/* Mobile View */}
+            <div className="block lg:hidden space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Checkbox
+                  checked={selected.links.size === sharedLinks.length && sharedLinks.length > 0}
+                  onClick={toggleSelectAll}
+                />
+                <span className="text-sm text-muted-foreground">
+                  {selected.links.size === sharedLinks.length
+                    ? "Deselect all"
+                    : "Select all"}
+                </span>
+              </div>
+              
+              {sharedLinks.map((link) => (
+                <div key={link.id} className="border rounded-lg p-4 space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={selected.links.has(link.id)}
+                        onClick={() => toggleSelect(link)}
+                      />
+                      <Badge variant={link.type === 'group' ? 'default' : 'secondary'}>
+                        {link.type === 'group' ? 'Group' : 'Model'}
+                      </Badge>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="hover:bg-red-100 text-red-500 hover:text-red-600"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeletingLink(link);
+                        setSelected({
+                          links: new Set([link.id]),
+                          groupCount: link.type === 'group' ? 1 : 0,
+                          modelCount: link.type === 'model' ? 1 : 0
+                        });
+                        setShowDeleteDialog(true);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  <div>
+                    <h3 className="font-medium mb-1">
+                      {link.type === 'group' ? link.group.title : link.model.name}
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleCopyLink(link)}
+                        className="flex-1"
+                      >
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copy Link
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenLink(link)}
+                        className="flex-1"
+                      >
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Open Link
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Created by</span>
+                      <div className="font-medium">
+                        {link.user?.name}
+                        <div className="text-xs text-muted-foreground">{link.user?.email}</div>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Access</span>
+                      <div className="space-y-1">
+                        <Badge variant="outline" className="mr-1">{link.access_type}</Badge>
+                        {link.one_time_view && (
+                          <Badge variant="secondary">One-time use</Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Expires</span>
+                      <div>
+                        {link.expires_at ? (
+                          <span className={`${new Date(link.expires_at) < new Date() ? "text-destructive" : ""}`}>
+                            {new Date(link.expires_at).toLocaleDateString()}
+                          </span>
+                        ) : (
+                          "Never"
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Views</span>
+                      <div className="font-medium">{link.views_count}</div>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-muted-foreground">Created</span>
+                      <div>{new Date(link.created_at).toLocaleDateString()}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {!loading && sharedLinks.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  No shared links found
+                </div>
+              )}
+            </div>
+
+            {/* Desktop View */}
+            <div className="hidden lg:block border rounded-lg bg-card overflow-x-auto -mx-3 sm:mx-0">
               <Table>
                 <TableHeader>
                   <TableRow>

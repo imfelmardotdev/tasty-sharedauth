@@ -277,7 +277,86 @@ const ModelsPage = () => {
             </Button>
           </div>
 
-          <div className="border rounded-lg bg-card overflow-auto">
+          {/* Mobile View */}
+          <div className="block lg:hidden space-y-4">
+            {models.map((model) => (
+              <div key={model.id} className="border rounded-lg p-4 space-y-4 bg-card">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-medium text-lg">{model.name}</h3>
+                    <p className="text-sm text-muted-foreground">{model.username}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="hover:bg-slate-100"
+                      onClick={() => setSharingModel(model)}
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="hover:bg-slate-100"
+                      onClick={() => setEditingModel(model)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="hover:bg-red-100 text-red-500 hover:text-red-600"
+                      onClick={() => setDeleteModelId(model.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-muted-foreground block">Code</span>
+                    <span className="font-medium">{model.code}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block">2FA Code</span>
+                    <div className="font-medium">
+                      {model.totp_secret ? (
+                        <TOTPDisplay 
+                          secret={model.totp_secret}
+                          modelId={model.id}
+                        />
+                      ) : (
+                        <span className="text-gray-400">No 2FA configured</span>
+                      )}
+                    </div>
+                  </div>
+                  {model.link && (
+                    <div className="col-span-2">
+                      <span className="text-muted-foreground block">Link</span>
+                      <a
+                        href={model.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:underline break-all"
+                      >
+                        {model.link}
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+            {!loading && models.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                No models found
+              </div>
+            )}
+          </div>
+
+          {/* Desktop View */}
+          <div className="hidden lg:block border rounded-lg bg-card overflow-auto">
             <Table>
               <TableHeader>
                 <TableRow>
