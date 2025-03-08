@@ -104,7 +104,7 @@ const CodeGroupCard = ({
         </div>
       </CardContent>
 
-      <CardFooter className="absolute bottom-0 right-0 p-4 flex justify-end gap-1.5 bg-gradient-to-t from-background/80 to-transparent backdrop-blur-sm w-full">
+      <CardFooter className="absolute bottom-0 right-0 p-4 flex justify-end gap-3 bg-gradient-to-t from-background/80 to-transparent backdrop-blur-sm w-full">
         <TooltipProvider delayDuration={200}>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -112,7 +112,7 @@ const CodeGroupCard = ({
                 variant="ghost"
                 size="icon"
                 onClick={() => navigate(`/group/${id}`)}
-                className="h-8 w-8 opacity-60 hover:opacity-100 transition-opacity hover:bg-primary/10"
+                className="h-9 w-9 sm:h-8 sm:w-8 opacity-60 hover:opacity-100 transition-opacity hover:bg-primary/10"
               >
                 <Settings className="h-4 w-4" />
               </Button>
@@ -128,7 +128,7 @@ const CodeGroupCard = ({
                 variant="ghost"
                 size="icon"
                 onClick={onCopy}
-                className="h-8 w-8 opacity-60 hover:opacity-100 transition-opacity hover:bg-primary/10"
+                className="h-9 w-9 sm:h-8 sm:w-8 opacity-60 hover:opacity-100 transition-opacity hover:bg-primary/10"
               >
                 <Copy className="h-4 w-4" />
               </Button>
@@ -144,7 +144,7 @@ const CodeGroupCard = ({
                 variant="ghost"
                 size="icon"
                 onClick={onShare}
-                className="h-8 w-8 opacity-60 hover:opacity-100 transition-opacity hover:bg-primary/10"
+                className="h-9 w-9 sm:h-8 sm:w-8 opacity-60 hover:opacity-100 transition-opacity hover:bg-primary/10"
               >
                 <Share2 className="h-4 w-4" />
               </Button>

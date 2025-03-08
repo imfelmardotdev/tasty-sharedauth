@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,19 +29,17 @@ const GroupsPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const currentRole = localStorage.getItem("userRole") as Role;
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isAddGroupModalOpen, setIsAddGroupModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  const toggleMobileSidebar = () => setIsMobileSidebarOpen(prev => !prev);
   const [selectedGroup, setSelectedGroup] = useState<{
     id: string;
     title: string;
   } | null>(null);
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const { groups, loading, error, refreshData } = useDatabase();
-  
-  const toggleMobileSidebar = useCallback(() => {
-    setIsMobileSidebarOpen(prev => !prev);
-  }, []);
 
   const handleDeleteGroup = async () => {
     if (!selectedGroup) return;
@@ -70,15 +68,15 @@ const GroupsPage = () => {
     return (
       <div className="min-h-screen bg-background flex">
         <Sidebar 
-          currentRole={currentRole} 
+          currentRole={currentRole}
           isMobileSidebarOpen={isMobileSidebarOpen}
           toggleMobileSidebar={toggleMobileSidebar}
         />
         <Header 
-          currentRole={currentRole} 
+          currentRole={currentRole}
           toggleMobileSidebar={toggleMobileSidebar}
         />
-        <main className="flex-1 md:ml-64 ml-0 pt-16 px-4 container mx-auto max-w-7xl">
+        <main className="flex-1 ml-0 md:ml-64 pt-16 px-4 container mx-auto max-w-7xl">
           <div className="flex justify-center items-center h-[calc(100vh-4rem)]">
             <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
           </div>
@@ -91,15 +89,15 @@ const GroupsPage = () => {
     return (
       <div className="min-h-screen bg-background flex">
         <Sidebar 
-          currentRole={currentRole} 
+          currentRole={currentRole}
           isMobileSidebarOpen={isMobileSidebarOpen}
           toggleMobileSidebar={toggleMobileSidebar}
         />
         <Header 
-          currentRole={currentRole} 
+          currentRole={currentRole}
           toggleMobileSidebar={toggleMobileSidebar}
         />
-        <main className="flex-1 md:ml-64 ml-0 pt-16 px-4 container mx-auto max-w-7xl">
+        <main className="flex-1 ml-0 md:ml-64 pt-16 px-4 container mx-auto max-w-7xl">
           <div className="flex justify-center items-center h-[calc(100vh-4rem)]">
             <div className="text-destructive">
               Error loading groups: {error.message}
@@ -113,17 +111,17 @@ const GroupsPage = () => {
   return (
     <div className="min-h-screen bg-background flex">
       <Sidebar 
-        currentRole={currentRole} 
+        currentRole={currentRole}
         isMobileSidebarOpen={isMobileSidebarOpen}
         toggleMobileSidebar={toggleMobileSidebar}
       />
       <Header 
-        currentRole={currentRole} 
+        currentRole={currentRole}
         toggleMobileSidebar={toggleMobileSidebar}
       />
 
-      <main className="flex-1 md:ml-64 ml-0 pt-16 px-2 sm:px-4 container mx-auto max-w-7xl">
-        <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+      <main className="flex-1 ml-0 md:ml-64 pt-16 px-4 container mx-auto max-w-7xl">
+        <div className="p-6 space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-semibold">Groups</h2>
             <Button
@@ -131,19 +129,18 @@ const GroupsPage = () => {
               className="flex items-center gap-2"
             >
               <FolderPlus className="w-4 h-4" />
-              <span className="hidden sm:inline">New Group</span>
-              <span className="sm:hidden">New</span>
+              New Group
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {groups.map((group) => (
               <Card 
                 key={group.id} 
                 className="bg-card hover:bg-card/80 cursor-pointer transition-colors"
                 onClick={() => navigate(`/group/${group.id}`)}
               >
-                <CardHeader className="p-4 sm:p-6">
+                <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle>{group.title}</CardTitle>
@@ -183,7 +180,7 @@ const GroupsPage = () => {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+                <CardContent>
                   <div className="text-muted-foreground">
                     {group.codes?.length || 0} code{group.codes?.length !== 1 ? 's' : ''} available
                   </div>

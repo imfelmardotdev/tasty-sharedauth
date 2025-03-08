@@ -54,7 +54,7 @@ const Sidebar = ({
   const menuItems = [
     {
       icon: Key,
-      label: "Sharedauth Codes",
+      label: "Dashboard",
       allowed: ["Admin", "Manager", "User"],
       path: "/dashboard",
     },

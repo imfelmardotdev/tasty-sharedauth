@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import TotpCode from "./TotpCode";
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
@@ -38,6 +38,7 @@ const GroupManagement = () => {
   const { toast } = useToast();
   const currentRole = localStorage.getItem("userRole") as Role;
   const userId = localStorage.getItem("userId");
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -45,6 +46,8 @@ const GroupManagement = () => {
     id: string;
     title: string;
   } | null>(null);
+
+  const toggleMobileSidebar = () => setIsMobileSidebarOpen(prev => !prev);
 
   const { groups, loading, error, refreshData } = useDatabase();
   const group = groups.find((g) => g.id === id);
@@ -127,7 +130,7 @@ const GroupManagement = () => {
         "1d": 24 * 60 * 60,
       };
 
-      const expirationSeconds = expirationMap[values.expiration as keyof typeof expirationMap] || 30;
+      const expirationSeconds = expirationMap[values.expiration] || 30;
       const now = new Date();
       const expiresAt = new Date(now.getTime() + expirationSeconds * 1000);
 
@@ -141,7 +144,10 @@ const GroupManagement = () => {
         expires_at: expiresAt.toISOString(),
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error adding code:", error);
+        throw error;
+      }
 
       await refreshData();
       setIsAddModalOpen(false);
@@ -162,11 +168,20 @@ const GroupManagement = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex">
-        <Sidebar currentRole={currentRole} />
-        <Header currentRole={currentRole} />
-        <main className="flex-1 md:ml-64 ml-0 pt-16 container mx-auto max-w-7xl">
-          <div className="flex justify-center items-center h-[calc(100vh-4rem)]">
-            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+        <Sidebar 
+          currentRole={currentRole}
+          isMobileSidebarOpen={isMobileSidebarOpen}
+          toggleMobileSidebar={toggleMobileSidebar}
+        />
+        <Header 
+          currentRole={currentRole}
+          toggleMobileSidebar={toggleMobileSidebar}
+        />
+        <main className="flex-1 pt-16 w-full">
+          <div className="p-2 md:pl-[16.5rem] md:pr-6 md:pt-6">
+            <div className="flex justify-center items-center h-[calc(100vh-5rem)]">
+              <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+            </div>
           </div>
         </main>
       </div>
@@ -176,12 +191,21 @@ const GroupManagement = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-background flex">
-        <Sidebar currentRole={currentRole} />
-        <Header currentRole={currentRole} />
-        <main className="flex-1 md:ml-64 ml-0 pt-16 container mx-auto max-w-7xl">
-          <div className="flex justify-center items-center h-[calc(100vh-4rem)]">
-            <div className="text-destructive">
-              Error loading group: {error.message}
+        <Sidebar 
+          currentRole={currentRole}
+          isMobileSidebarOpen={isMobileSidebarOpen}
+          toggleMobileSidebar={toggleMobileSidebar}
+        />
+        <Header 
+          currentRole={currentRole}
+          toggleMobileSidebar={toggleMobileSidebar}
+        />
+        <main className="flex-1 pt-16 w-full">
+          <div className="p-2 md:pl-[16.5rem] md:pr-6 md:pt-6">
+            <div className="flex justify-center items-center h-[calc(100vh-5rem)]">
+              <div className="text-destructive">
+                Error loading group: {error.message}
+              </div>
             </div>
           </div>
         </main>
@@ -192,11 +216,20 @@ const GroupManagement = () => {
   if (!group) {
     return (
       <div className="min-h-screen bg-background flex">
-        <Sidebar currentRole={currentRole} />
-        <Header currentRole={currentRole} />
-        <main className="flex-1 md:ml-64 ml-0 pt-16 container mx-auto max-w-7xl">
-          <div className="flex justify-center items-center h-[calc(100vh-4rem)]">
-            <div className="text-destructive">Group not found</div>
+        <Sidebar 
+          currentRole={currentRole}
+          isMobileSidebarOpen={isMobileSidebarOpen}
+          toggleMobileSidebar={toggleMobileSidebar}
+        />
+        <Header 
+          currentRole={currentRole}
+          toggleMobileSidebar={toggleMobileSidebar}
+        />
+        <main className="flex-1 pt-16 w-full">
+          <div className="p-2 md:pl-[16.5rem] md:pr-6 md:pt-6">
+            <div className="flex justify-center items-center h-[calc(100vh-5rem)]">
+              <div className="text-destructive">Group not found</div>
+            </div>
           </div>
         </main>
       </div>
@@ -205,32 +238,39 @@ const GroupManagement = () => {
 
   return (
     <div className="min-h-screen bg-background flex">
-      <Sidebar currentRole={currentRole} />
-      <Header currentRole={currentRole} />
+      <Sidebar 
+        currentRole={currentRole}
+        isMobileSidebarOpen={isMobileSidebarOpen}
+        toggleMobileSidebar={toggleMobileSidebar}
+      />
+      <Header 
+        currentRole={currentRole}
+        toggleMobileSidebar={toggleMobileSidebar}
+      />
 
-      <main className="flex-1 md:ml-64 ml-0 pt-16 container mx-auto max-w-7xl">
-        <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
-          <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
+      <main className="flex-1 pt-16 w-full">
+        <div className="p-2 md:pl-[16.5rem] md:pr-6 md:pt-6 space-y-4 sm:space-y-6">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <div className="flex items-start sm:items-center gap-3">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => navigate("/groups")}
-                className="shrink-0"
+                className="h-8 w-8"
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
               <div>
-                <h2 className="text-xl sm:text-2xl font-semibold tracking-tight break-words">{group.title}</h2>
+                <h2 className="text-xl sm:text-2xl font-semibold truncate">{group.title}</h2>
                 {group.description && (
-                  <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
+                  <p className="text-sm text-muted-foreground line-clamp-2">
                     {group.description}
                   </p>
                 )}
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <Badge variant="outline" className="flex items-center gap-1 sm:gap-1.5">
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              <Badge variant="outline" className="flex items-center gap-1">
                 <Users className="w-3 h-3" />
                 <span>{group.member_count?.[0]?.count ?? 0} members</span>
               </Badge>
@@ -238,7 +278,7 @@ const GroupManagement = () => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8"
                   onClick={() => setIsDeleteDialogOpen(true)}
                 >
                   <Trash2 className="w-4 h-4" />
@@ -246,150 +286,152 @@ const GroupManagement = () => {
               )}
               <Button
                 onClick={() => setIsAddModalOpen(true)}
-                className="flex items-center gap-2 ml-auto sm:ml-0"
+                className="flex-1 sm:flex-initial flex items-center gap-2"
+                size="sm"
               >
                 <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">Add Code</span>
-                <span className="sm:hidden">Add</span>
+                Add Code
               </Button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
-            {(!group.codes || group.codes.length === 0) && (
-              <div className="col-span-full text-center py-8 sm:py-12 text-muted-foreground/80 text-sm sm:text-base">
-                No codes found. Click "Add Code" to create one.
-              </div>
-            )}
-            
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {group.codes?.map((code) => (
               <Card
                 key={code.id}
-                className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-md hover:shadow-lg transition-all duration-300 relative overflow-hidden group"
+                className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden group h-[280px] sm:h-[320px]"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 
-                <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
-                  <div className="space-y-1.5">
-                    {code.name && (
-                      <h3 className="text-base font-semibold text-foreground">{code.name}</h3>
-                    )}
-                    <div className="text-xs text-muted-foreground/80 flex flex-col sm:flex-row gap-1 sm:gap-2">
-                      <span>Created {new Date(code.created_at).toLocaleString()}</span>
-                      <Timer expiresAt={code.expires_at} codeId={code.id} groupId={group.id} />
+                <CardHeader className="pb-2 space-y-3 sm:space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1.5">
+                      {code.name && (
+                        <h3 className="text-base font-semibold text-foreground truncate">{code.name}</h3>
+                      )}
+                      
+                      <div className="text-xs text-muted-foreground/80 flex flex-col sm:flex-row sm:items-center gap-2">
+                        <span className="truncate">Created {new Date(code.created_at).toLocaleString()}</span>
+                        <Timer expiresAt={code.expires_at} codeId={code.id} groupId={group.id} />
+                      </div>
                     </div>
                   </div>
                 </CardHeader>
 
-                <CardContent className="p-4 sm:p-6 pt-2 sm:pt-4">
-                  <div className="space-y-4">
-                    <div className="p-3 sm:p-4 bg-background/90 backdrop-blur-sm rounded-lg border border-border/50 shadow-inner">
-                      <div className="text-lg sm:text-2xl lg:text-3xl font-mono tracking-[0.15em] sm:tracking-[0.25em] lg:tracking-[0.35em] text-primary font-bold text-center break-all">
+                <CardContent>
+                  <div className="flex flex-col items-center justify-center space-y-4 sm:space-y-6">
+                    <div className="w-full p-4 sm:p-6 bg-background/90 backdrop-blur-sm rounded-xl border border-border/50 shadow-inner flex justify-center">
+                      <div className="text-2xl sm:text-4xl font-mono tracking-[0.25em] sm:tracking-[0.5em] text-primary font-bold break-all sm:break-normal">
                         {code.code}
                       </div>
                     </div>
                     
                     {code.notes && (
-                      <p className="text-sm text-muted-foreground text-center px-2">
-                        {code.notes}
-                      </p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-muted-foreground text-center line-clamp-2">
+                          {code.notes}
+                        </p>
+                      </div>
                     )}
-
-                    <div className="flex justify-center items-center gap-2 sm:gap-3">
-                      <TooltipProvider delayDuration={200}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="flex items-center gap-1.5 sm:gap-2 hover:bg-primary/10 hover:text-primary transition-colors py-2 h-auto"
-                              onClick={() => {
-                                navigator.clipboard.writeText(code.code);
-                                toast({
-                                  title: "Code copied!",
-                                  description: "The code has been copied to your clipboard.",
-                                });
-                              }}
-                            >
-                              <Copy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                              <span className="hidden sm:inline">Copy Code</span>
-                              <span className="sm:hidden">Copy</span>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top">
-                            Copy code to clipboard
-                          </TooltipContent>
-                        </Tooltip>
-
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="flex items-center gap-1.5 sm:gap-2 hover:bg-primary/10 hover:text-primary transition-colors py-2 h-auto"
-                              onClick={() => {
-                                setSharedDetails({
-                                  id: group.id,
-                                  title: `${group.title} - Code: ${code.code}`,
-                                });
-                                setIsShareModalOpen(true);
-                              }}
-                            >
-                              <Share2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                              <span className="hidden sm:inline">Share</span>
-                              <span className="sm:hidden">Share</span>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top">
-                            Share this code
-                          </TooltipContent>
-                        </Tooltip>
-
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="flex items-center gap-1.5 sm:gap-2 hover:bg-destructive/10 hover:text-destructive transition-colors py-2 h-auto"
-                              onClick={async () => {
-                                try {
-                                  const { error } = await supabase
-                                    .from("codes")
-                                    .delete()
-                                    .eq("id", code.id);
-
-                                  if (error) throw error;
-
-                                  await refreshData();
-                                  toast({
-                                    title: "Success",
-                                    description: "Code deleted successfully",
-                                  });
-                                } catch (err) {
-                                  console.error("Error deleting code:", err);
-                                  toast({
-                                    title: "Error",
-                                    description: "Failed to delete code",
-                                    variant: "destructive",
-                                  });
-                                }
-                              }}
-                            >
-                              <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                              <span className="hidden sm:inline">Delete</span>
-                              <span className="sm:hidden">Delete</span>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top">
-                            Delete this code
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
                   </div>
                 </CardContent>
+
+                <CardFooter className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 flex justify-center gap-2 sm:gap-3 bg-gradient-to-t from-background/90 to-transparent backdrop-blur-sm">
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="flex items-center gap-1.5 hover:bg-primary/10 hover:text-primary transition-colors px-2.5 h-8"
+                          onClick={() => {
+                            navigator.clipboard.writeText(code.code);
+                            toast({
+                              title: "Code copied!",
+                              description: "The code has been copied to your clipboard.",
+                            });
+                          }}
+                        >
+                          <Copy className="h-4 w-4" />
+                          <span className="hidden sm:inline">Copy</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="font-medium">
+                        <p>Copy code to clipboard</p>
+                      </TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="flex items-center gap-1.5 hover:bg-primary/10 hover:text-primary transition-colors px-2.5 h-8"
+                          onClick={() => {
+                            setSharedDetails({
+                              id: group.id,
+                              title: `${group.title} - Code: ${code.code}`,
+                            });
+                            setIsShareModalOpen(true);
+                          }}
+                        >
+                          <Share2 className="h-4 w-4" />
+                          <span className="hidden sm:inline">Share</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="font-medium">
+                        <p>Share this code</p>
+                      </TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="flex items-center gap-1.5 hover:bg-destructive/10 hover:text-destructive transition-colors px-2.5 h-8"
+                          onClick={async () => {
+                            try {
+                              const { error } = await supabase
+                                .from("codes")
+                                .delete()
+                                .eq("id", code.id);
+
+                              if (error) throw error;
+
+                              await refreshData();
+                              toast({
+                                title: "Success",
+                                description: "Code deleted successfully",
+                              });
+                            } catch (err) {
+                              console.error("Error deleting code:", err);
+                              toast({
+                                title: "Error",
+                                description: "Failed to delete code",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="hidden sm:inline">Delete</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="font-medium">
+                        <p>Delete this code</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </CardFooter>
               </Card>
             ))}
+
+            {(!group.codes || group.codes.length === 0) && (
+              <div className="col-span-full text-center text-muted-foreground py-8">
+                No codes found. Click "Add Code" to create one.
+              </div>
+            )}
           </div>
         </div>
 
