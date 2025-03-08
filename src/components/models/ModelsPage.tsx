@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Table,
   TableBody,
@@ -41,6 +41,11 @@ const ModelsPage = () => {
   const [deleteModelId, setDeleteModelId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [sharingModel, setSharingModel] = useState<Model | null>(null);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  
+  const toggleMobileSidebar = useCallback(() => {
+    setIsMobileSidebarOpen(prev => !prev);
+  }, []);
 
   const fetchModels = async () => {
     try {
@@ -248,11 +253,18 @@ const ModelsPage = () => {
 
   return (
     <div className="min-h-screen bg-background flex">
-      <Sidebar currentRole={currentRole} />
-      <Header currentRole={currentRole} />
+      <Sidebar 
+        currentRole={currentRole} 
+        isMobileSidebarOpen={isMobileSidebarOpen}
+        toggleMobileSidebar={toggleMobileSidebar}
+      />
+      <Header 
+        currentRole={currentRole} 
+        toggleMobileSidebar={toggleMobileSidebar}
+      />
 
-      <main className="flex-1 ml-64 pt-16 px-4 container mx-auto max-w-7xl bg-background min-h-screen">
-        <div className="p-6 space-y-6">
+      <main className="flex-1 md:ml-64 ml-0 pt-16 px-2 sm:px-4 container mx-auto max-w-7xl bg-background min-h-screen">
+        <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-semibold">Models</h2>
             <Button
@@ -260,11 +272,12 @@ const ModelsPage = () => {
               className="flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
-              Add Model
+              <span className="hidden sm:inline">Add Model</span>
+              <span className="sm:hidden">Add</span>
             </Button>
           </div>
 
-          <div className="border rounded-lg bg-card">
+          <div className="border rounded-lg bg-card overflow-auto">
             <Table>
               <TableHeader>
                 <TableRow>

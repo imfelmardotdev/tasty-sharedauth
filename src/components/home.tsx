@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { getPermissions, type Role } from "@/lib/utils/roles";
 import Sidebar from "./layout/Sidebar";
 import { generateCode } from "@/lib/utils/2fa";
@@ -41,6 +41,11 @@ const Home = ({ initialRole = "User" }: HomeProps) => {
 
   const { groups, loading, error, refreshData } = useDatabase();
   const [localGroups, setLocalGroups] = useState(groups);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  
+  const toggleMobileSidebar = useCallback(() => {
+    setIsMobileSidebarOpen(prev => !prev);
+  }, []);
 
   // Prevent caching of the dashboard page
   useEffect(() => {
@@ -203,10 +208,17 @@ const Home = ({ initialRole = "User" }: HomeProps) => {
 
   return (
     <div className="min-h-screen bg-background flex">
-      <Sidebar currentRole={currentRole} />
-      <Header currentRole={currentRole} />
+      <Sidebar 
+        currentRole={currentRole} 
+        isMobileSidebarOpen={isMobileSidebarOpen}
+        toggleMobileSidebar={toggleMobileSidebar}
+      />
+      <Header 
+        currentRole={currentRole} 
+        toggleMobileSidebar={toggleMobileSidebar}
+      />
 
-      <main className="flex-1 ml-64 pt-16 px-4 container mx-auto max-w-7xl bg-background min-h-screen">
+      <main className="flex-1 md:ml-64 ml-0 pt-16 px-4 container mx-auto max-w-7xl bg-background min-h-screen">
         <div className="py-6">
           <h2 className="text-2xl font-semibold mb-6">Dashboard Overview</h2>
 

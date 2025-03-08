@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,7 +36,12 @@ const GroupsPage = () => {
     id: string;
     title: string;
   } | null>(null);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const { groups, loading, error, refreshData } = useDatabase();
+  
+  const toggleMobileSidebar = useCallback(() => {
+    setIsMobileSidebarOpen(prev => !prev);
+  }, []);
 
   const handleDeleteGroup = async () => {
     if (!selectedGroup) return;
@@ -64,9 +69,16 @@ const GroupsPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex">
-        <Sidebar currentRole={currentRole} />
-        <Header currentRole={currentRole} />
-        <main className="flex-1 ml-64 pt-16 px-4 container mx-auto max-w-7xl">
+        <Sidebar 
+          currentRole={currentRole} 
+          isMobileSidebarOpen={isMobileSidebarOpen}
+          toggleMobileSidebar={toggleMobileSidebar}
+        />
+        <Header 
+          currentRole={currentRole} 
+          toggleMobileSidebar={toggleMobileSidebar}
+        />
+        <main className="flex-1 md:ml-64 ml-0 pt-16 px-4 container mx-auto max-w-7xl">
           <div className="flex justify-center items-center h-[calc(100vh-4rem)]">
             <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
           </div>
@@ -78,9 +90,16 @@ const GroupsPage = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-background flex">
-        <Sidebar currentRole={currentRole} />
-        <Header currentRole={currentRole} />
-        <main className="flex-1 ml-64 pt-16 px-4 container mx-auto max-w-7xl">
+        <Sidebar 
+          currentRole={currentRole} 
+          isMobileSidebarOpen={isMobileSidebarOpen}
+          toggleMobileSidebar={toggleMobileSidebar}
+        />
+        <Header 
+          currentRole={currentRole} 
+          toggleMobileSidebar={toggleMobileSidebar}
+        />
+        <main className="flex-1 md:ml-64 ml-0 pt-16 px-4 container mx-auto max-w-7xl">
           <div className="flex justify-center items-center h-[calc(100vh-4rem)]">
             <div className="text-destructive">
               Error loading groups: {error.message}
@@ -93,11 +112,18 @@ const GroupsPage = () => {
 
   return (
     <div className="min-h-screen bg-background flex">
-      <Sidebar currentRole={currentRole} />
-      <Header currentRole={currentRole} />
+      <Sidebar 
+        currentRole={currentRole} 
+        isMobileSidebarOpen={isMobileSidebarOpen}
+        toggleMobileSidebar={toggleMobileSidebar}
+      />
+      <Header 
+        currentRole={currentRole} 
+        toggleMobileSidebar={toggleMobileSidebar}
+      />
 
-      <main className="flex-1 ml-64 pt-16 px-4 container mx-auto max-w-7xl">
-        <div className="p-6 space-y-6">
+      <main className="flex-1 md:ml-64 ml-0 pt-16 px-2 sm:px-4 container mx-auto max-w-7xl">
+        <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-semibold">Groups</h2>
             <Button
@@ -105,18 +131,19 @@ const GroupsPage = () => {
               className="flex items-center gap-2"
             >
               <FolderPlus className="w-4 h-4" />
-              New Group
+              <span className="hidden sm:inline">New Group</span>
+              <span className="sm:hidden">New</span>
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
             {groups.map((group) => (
               <Card 
                 key={group.id} 
                 className="bg-card hover:bg-card/80 cursor-pointer transition-colors"
                 onClick={() => navigate(`/group/${group.id}`)}
               >
-                <CardHeader>
+                <CardHeader className="p-4 sm:p-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle>{group.title}</CardTitle>
@@ -156,7 +183,7 @@ const GroupsPage = () => {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
                   <div className="text-muted-foreground">
                     {group.codes?.length || 0} code{group.codes?.length !== 1 ? 's' : ''} available
                   </div>

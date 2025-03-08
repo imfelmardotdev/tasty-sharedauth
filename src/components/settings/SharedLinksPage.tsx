@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Table,
   TableBody,
@@ -64,6 +64,26 @@ const SharedLinksPage = () => {
   const [loading, setLoading] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deletingLink, setDeletingLink] = useState<SharedLink | null>(null);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState<"all" | "group" | "model">("all");
+  const [sortBy, setSortBy] = useState<"date" | "name" | "views">("date");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  
+  const filteredAndSortedLinks = sharedLinks
+    .filter(link => {
+    const matchesSearch = searchTerm.toLowerCase().trim() === "" || 
+      (link.type === "group" && link.group.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (link.type === "model" && link.model.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesType = filterType === "all" || link.type === filterType;
+    
+    return matchesSearch && matchesType;
+  });
+  
+  const toggleMobileSidebar = useCallback(() => {
+    setIsMobileSidebarOpen(prev => !prev);
+  }, []);
   const [selected, setSelected] = useState<Selected>({
     links: new Set(),
     groupCount: 0,
@@ -379,170 +399,205 @@ const SharedLinksPage = () => {
 
   return (
     <div className="min-h-screen bg-background flex">
-      <Sidebar currentRole={currentRole} />
-      <Header currentRole={currentRole} />
+      <Sidebar 
+        currentRole={currentRole} 
+        isMobileSidebarOpen={isMobileSidebarOpen}
+        toggleMobileSidebar={toggleMobileSidebar}
+      />
+      <Header 
+        currentRole={currentRole}
+        toggleMobileSidebar={toggleMobileSidebar}
+      />
 
-      <main className="flex-1 ml-64 pt-16 px-4 container mx-auto max-w-7xl">
-        <div className="p-6 space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-semibold">Shared Links</h2>
-            {selected.links.size > 0 && (
-              <Button
-                variant="destructive"
-                onClick={() => {
-                  setDeletingLink(null);
-                  setShowDeleteDialog(true);
-                }}
-                className="flex items-center gap-2"
-              >
-                <Trash2 className="h-4 w-4" />
-                Delete Selected ({selected.links.size})
-              </Button>
-            )}
-          </div>
+      <main className="flex-1 md:ml-64 ml-0 pt-16 px-2 sm:px-4 container mx-auto max-w-7xl">
+        <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <h2 className="text-xl sm:text-2xl font-semibold">Shared Links</h2>
+              <div className="flex-1 flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    placeholder="Search links..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full h-9 px-3 rounded-md border bg-background text-sm"
+                    aria-label="Search links"
+                  />
+                </div>
+                <select
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value as "all" | "group" | "model")}
+                  className="h-9 px-3 rounded-md border bg-background text-sm"
+                  aria-label="Filter by type"
+                >
+                  <option value="all">All Types</option>
+                  <option value="group">Groups Only</option>
+                  <option value="model">Models Only</option>
+                </select>
+              </div>
+              <div className="flex justify-end">
+                {selected.links.size > 0 && (
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      setDeletingLink(null);
+                      setShowDeleteDialog(true);
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span className="hidden sm:inline">Delete Selected</span>
+                    <span className="sm:hidden">Delete</span>
+                    <span className="ml-1">({selected.links.size})</span>
+                  </Button>
+                )}
+              </div>
+            </div>
 
-          <div className="border rounded-lg bg-card">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[40px]">
-                    <Checkbox
-                      checked={selected.links.size === sharedLinks.length && sharedLinks.length > 0}
-                      onClick={toggleSelectAll}
-                    />
-                  </TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Share Link</TableHead>
-                  <TableHead>Created By</TableHead>
-                  <TableHead>Access Type</TableHead>
-                  <TableHead>Expires</TableHead>
-                  <TableHead>Views</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sharedLinks.map((link) => (
-                  <TableRow key={link.id}>
-                    <TableCell>
+            <div className="border rounded-lg bg-card overflow-x-auto -mx-3 sm:mx-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[40px] whitespace-nowrap">
                       <Checkbox
-                        checked={selected.links.has(link.id)}
-                        onClick={() => toggleSelect(link)}
+                        checked={selected.links.size === sharedLinks.length && sharedLinks.length > 0}
+                        onClick={toggleSelectAll}
                       />
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={link.type === 'group' ? 'default' : 'secondary'}>
-                        {link.type === 'group' ? 'Group' : 'Model'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {link.type === 'group' 
-                        ? link.group.title
-                        : link.model.name}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleCopyLink(link)}
-                        >
-                          <Copy className="h-4 w-4 mr-1" />
-                          Copy Link
-                        </Button>
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap w-[80px]">Type</TableHead>
+                    <TableHead className="min-w-[150px]">Name</TableHead>
+                    <TableHead className="min-w-[180px]">Share Link</TableHead>
+                    <TableHead className="min-w-[150px]">Created By</TableHead>
+                    <TableHead className="min-w-[120px]">Access Type</TableHead>
+                    <TableHead className="whitespace-nowrap w-[100px]">Expires</TableHead>
+                    <TableHead className="whitespace-nowrap w-[80px]">Views</TableHead>
+                    <TableHead className="whitespace-nowrap w-[100px]">Created</TableHead>
+                    <TableHead className="w-[60px] text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sharedLinks.map((link) => (
+                    <TableRow key={link.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selected.links.has(link.id)}
+                          onClick={() => toggleSelect(link)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={link.type === 'group' ? 'default' : 'secondary'}>
+                          {link.type === 'group' ? 'Group' : 'Model'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {link.type === 'group' 
+                          ? link.group.title
+                          : link.model.name}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleCopyLink(link)}
+                          >
+                            <Copy className="h-4 w-4 mr-1" />
+                            Copy Link
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleOpenLink(link)}
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span>{link.user?.name}</span>
+                          <span className="text-sm text-muted-foreground">
+                            {link.user?.email}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <Badge variant="outline">{link.access_type}</Badge>
+                          {link.one_time_view && (
+                            <Badge variant="secondary">One-time use</Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {link.expires_at ? (
+                          <span className={`${new Date(link.expires_at) < new Date() ? "text-destructive" : ""}`}>
+                            {new Date(link.expires_at).toLocaleDateString()}
+                          </span>
+                        ) : (
+                          "Never"
+                        )}
+                      </TableCell>
+                      <TableCell>{link.views_count}</TableCell>
+                      <TableCell>
+                        {new Date(link.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right">
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleOpenLink(link)}
+                          className="hover:bg-red-100 text-red-500 hover:text-red-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingLink(link);
+                            setSelected({
+                              links: new Set([link.id]),
+                              groupCount: link.type === 'group' ? 1 : 0,
+                              modelCount: link.type === 'model' ? 1 : 0
+                            });
+                            setShowDeleteDialog(true);
+                          }}
                         >
-                          <ExternalLink className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span>{link.user?.name}</span>
-                        <span className="text-sm text-muted-foreground">
-                          {link.user?.email}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <Badge variant="outline">{link.access_type}</Badge>
-                        {link.one_time_view && (
-                          <Badge variant="secondary">One-time use</Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {link.expires_at ? (
-                        <span className={`${new Date(link.expires_at) < new Date() ? "text-destructive" : ""}`}>
-                          {new Date(link.expires_at).toLocaleDateString()}
-                        </span>
-                      ) : (
-                        "Never"
-                      )}
-                    </TableCell>
-                    <TableCell>{link.views_count}</TableCell>
-                    <TableCell>
-                      {new Date(link.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="hover:bg-red-100 text-red-500 hover:text-red-600"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeletingLink(link);
-                          setSelected({
-                            links: new Set([link.id]),
-                            groupCount: link.type === 'group' ? 1 : 0,
-                            modelCount: link.type === 'model' ? 1 : 0
-                          });
-                          setShowDeleteDialog(true);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {!loading && sharedLinks.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
-                      No shared links found
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {!loading && sharedLinks.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                        No shared links found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            <DeleteLinksDialog
+              open={showDeleteDialog}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setShowDeleteDialog(false);
+                  setDeletingLink(null);
+                }
+              }}
+              onConfirm={async () => {
+                if (deletingLink) {
+                  await handleSingleDelete(deletingLink);
+                } else {
+                  await handleBatchDelete();
+                }
+              }}
+              selectedCount={selected.links.size}
+              groupCount={selected.groupCount}
+              modelCount={selected.modelCount}
+              isSingleDelete={!!deletingLink}
+              itemType={deletingLink?.type}
+            />
           </div>
         </div>
-
-        <DeleteLinksDialog
-          open={showDeleteDialog}
-          onOpenChange={(open) => {
-            if (!open) {
-              setShowDeleteDialog(false);
-              setDeletingLink(null);
-            }
-          }}
-          onConfirm={async () => {
-            if (deletingLink) {
-              await handleSingleDelete(deletingLink);
-            } else {
-              await handleBatchDelete();
-            }
-          }}
-          selectedCount={selected.links.size}
-          groupCount={selected.groupCount}
-          modelCount={selected.modelCount}
-          isSingleDelete={!!deletingLink}
-          itemType={deletingLink?.type}
-        />
       </main>
     </div>
   );

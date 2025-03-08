@@ -47,8 +47,12 @@ const SettingsPage = () => {
               <CardTitle>Appearance</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
+              <div 
+                className="flex items-center justify-between rounded-lg p-2 hover:bg-accent/50 transition-colors"
+                role="group"
+                aria-labelledby="dark-mode-label"
+              >
+                <div className="flex items-center space-x-4" id="dark-mode-label">
                   {mode === "dark" ? (
                     <Moon className="w-5 h-5" />
                   ) : (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Table,
   TableBody,
@@ -45,6 +45,11 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole: Role }) => {
   const [editingMember, setEditingMember] = useState<User | null>(null);
   const [deletingMember, setDeletingMember] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  
+  const toggleMobileSidebar = useCallback(() => {
+    setIsMobileSidebarOpen(prev => !prev);
+  }, []);
 
   const fetchMembers = async (page = 1) => {
     if (currentRole !== "Admin" && currentRole !== "Manager") {
@@ -188,9 +193,16 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole: Role }) => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex">
-        <Sidebar currentRole={currentRole} />
-        <Header currentRole={currentRole} />
-        <main className="flex-1 ml-64 pt-16 px-4 container mx-auto max-w-7xl bg-background min-h-screen">
+        <Sidebar 
+          currentRole={currentRole} 
+          isMobileSidebarOpen={isMobileSidebarOpen}
+          toggleMobileSidebar={toggleMobileSidebar}
+        />
+        <Header 
+          currentRole={currentRole} 
+          toggleMobileSidebar={toggleMobileSidebar}
+        />
+        <main className="flex-1 md:ml-64 ml-0 pt-16 px-2 sm:px-4 container mx-auto max-w-7xl bg-background min-h-screen">
           <div className="flex justify-center items-center h-full">
             <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
           </div>
@@ -202,9 +214,16 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole: Role }) => {
   if (!loading && currentRole !== "Admin" && currentRole !== "Manager") {
     return (
       <div className="min-h-screen bg-background flex">
-        <Sidebar currentRole={currentRole} />
-        <Header currentRole={currentRole} />
-        <main className="flex-1 ml-64 pt-16 px-4 container mx-auto max-w-7xl bg-background min-h-screen">
+        <Sidebar 
+          currentRole={currentRole} 
+          isMobileSidebarOpen={isMobileSidebarOpen}
+          toggleMobileSidebar={toggleMobileSidebar}
+        />
+        <Header 
+          currentRole={currentRole} 
+          toggleMobileSidebar={toggleMobileSidebar}
+        />
+        <main className="flex-1 md:ml-64 ml-0 pt-16 px-2 sm:px-4 container mx-auto max-w-7xl bg-background min-h-screen">
           <div className="flex justify-center items-center h-full">
             <div className="text-lg text-red-500">
               Access denied. You need Admin or Manager permissions to view this
@@ -218,13 +237,20 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole: Role }) => {
 
   return (
     <div className="min-h-screen bg-background flex">
-      <Sidebar currentRole={currentRole} />
-      <Header currentRole={currentRole} />
+      <Sidebar 
+        currentRole={currentRole}
+        isMobileSidebarOpen={isMobileSidebarOpen}
+        toggleMobileSidebar={toggleMobileSidebar}
+      />
+      <Header 
+        currentRole={currentRole}
+        toggleMobileSidebar={toggleMobileSidebar}
+      />
 
-      <main className="flex-1 ml-64 pt-16 px-4 container mx-auto max-w-7xl bg-background min-h-screen">
-        <div className="p-6 space-y-6">
+      <main className="flex-1 md:ml-64 ml-0 pt-16 px-2 sm:px-4 container mx-auto max-w-7xl bg-background min-h-screen">
+        <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-semibold">Team Members</h2>
+            <h2 className="text-xl sm:text-2xl font-semibold">Team Members</h2>
             {(currentRole === "Admin" ||
               (currentRole === "Manager" &&
                 getPermissions(currentRole).canManageUsers)) && (
@@ -233,20 +259,21 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole: Role }) => {
                 className="flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" />
-                Add Team Member
+                <span className="hidden sm:inline">Add Team Member</span>
+                <span className="sm:hidden">Add</span>
               </Button>
             )}
           </div>
 
-          <div className="border rounded-lg bg-card">
+          <div className="border rounded-lg bg-card overflow-x-auto -mx-3 sm:mx-0">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Groups</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="whitespace-nowrap">Name</TableHead>
+                  <TableHead className="min-w-[180px]">Email</TableHead>
+                  <TableHead className="whitespace-nowrap">Role</TableHead>
+                  <TableHead className="min-w-[150px]">Groups</TableHead>
+                  <TableHead className="w-[100px] text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -321,22 +348,26 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole: Role }) => {
           </div>
 
           {totalMembers > 20 && (
-            <div className="flex justify-center mt-4 gap-2">
-              <Button
-                variant="outline"
-                onClick={() => fetchMembers(currentPage - 1)}
-                disabled={currentPage === 1 || loading}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => fetchMembers(currentPage + 1)}
-                disabled={currentPage * 20 >= totalMembers || loading}
-              >
-                Next
-              </Button>
-              <span className="py-2 px-3 text-sm text-muted-foreground">
+            <div className="flex flex-col sm:flex-row justify-center items-center mt-4 gap-2">
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fetchMembers(currentPage - 1)}
+                  disabled={currentPage === 1 || loading}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fetchMembers(currentPage + 1)}
+                  disabled={currentPage * 20 >= totalMembers || loading}
+                >
+                  Next
+                </Button>
+              </div>
+              <span className="text-sm text-muted-foreground mt-2 sm:mt-0">
                 Page {currentPage} of {Math.ceil(totalMembers / 20)}
               </span>
             </div>
