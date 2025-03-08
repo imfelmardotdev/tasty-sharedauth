@@ -36,7 +36,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const TeamAccess = ({ currentRole = "User" }: { currentRole: Role }) => {
+const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => {
   const { toast } = useToast();
   const [members, setMembers] = useState<User[]>([]);
   const [totalMembers, setTotalMembers] = useState(0);
@@ -47,12 +47,15 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole: Role }) => {
   const [loading, setLoading] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   
+  // Ensure we have a valid role, defaulting to User if null/undefined
+  const role = currentRole || "User";
+
   const toggleMobileSidebar = useCallback(() => {
     setIsMobileSidebarOpen(prev => !prev);
   }, []);
 
   const fetchMembers = async (page = 1) => {
-    if (currentRole !== "Admin" && currentRole !== "Manager") {
+    if (role !== "Admin" && role !== "Manager") {
       setLoading(false);
       return;
     }
@@ -76,12 +79,12 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole: Role }) => {
     let isMounted = true;
 
     // Initial fetch
-    if (currentRole === "Admin" || currentRole === "Manager") {
+    if (role === "Admin" || role === "Manager") {
       fetchMembers(1);
     }
 
     // Set up realtime subscription only if user has proper permissions
-    if (supabase && (currentRole === "Admin" || currentRole === "Manager")) {
+    if (supabase && (role === "Admin" || role === "Manager")) {
       const channel = supabase
         .channel('users-changes')
         .on<User>(
@@ -124,7 +127,7 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole: Role }) => {
     return () => {
       isMounted = false;
     };
-  }, [currentRole]);
+  }, [role]);
 
   const handleAddMember = async (values: {
     name: string;
@@ -163,11 +166,11 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole: Role }) => {
     if (!editingMember) return;
 
     try {
-  await updateTeamMember(editingMember.id, {
-    name: values.name,
-    email: values.email,
-    role: values.role,
-    groupNames: values.groupNames,
+      await updateTeamMember(editingMember.id, {
+        name: values.name,
+        email: values.email,
+        role: values.role,
+        groupNames: values.groupNames,
       });
 
       // Refresh the current page
@@ -194,12 +197,12 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole: Role }) => {
     return (
       <div className="min-h-screen bg-background flex">
         <Sidebar 
-          currentRole={currentRole} 
+          currentRole={role} 
           isMobileSidebarOpen={isMobileSidebarOpen}
           toggleMobileSidebar={toggleMobileSidebar}
         />
         <Header 
-          currentRole={currentRole} 
+          currentRole={role} 
           toggleMobileSidebar={toggleMobileSidebar}
         />
         <main className="flex-1 md:ml-64 ml-0 pt-16 px-2 sm:px-4 container mx-auto max-w-7xl bg-background min-h-screen">
@@ -211,16 +214,16 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole: Role }) => {
     );
   }
 
-  if (!loading && currentRole !== "Admin" && currentRole !== "Manager") {
+  if (!loading && role !== "Admin" && role !== "Manager") {
     return (
       <div className="min-h-screen bg-background flex">
         <Sidebar 
-          currentRole={currentRole} 
+          currentRole={role} 
           isMobileSidebarOpen={isMobileSidebarOpen}
           toggleMobileSidebar={toggleMobileSidebar}
         />
         <Header 
-          currentRole={currentRole} 
+          currentRole={role} 
           toggleMobileSidebar={toggleMobileSidebar}
         />
         <main className="flex-1 md:ml-64 ml-0 pt-16 px-2 sm:px-4 container mx-auto max-w-7xl bg-background min-h-screen">
@@ -238,12 +241,12 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole: Role }) => {
   return (
     <div className="min-h-screen bg-background flex">
       <Sidebar 
-        currentRole={currentRole}
+        currentRole={role}
         isMobileSidebarOpen={isMobileSidebarOpen}
         toggleMobileSidebar={toggleMobileSidebar}
       />
       <Header 
-        currentRole={currentRole}
+        currentRole={role}
         toggleMobileSidebar={toggleMobileSidebar}
       />
 
@@ -251,9 +254,9 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole: Role }) => {
         <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-xl sm:text-2xl font-semibold">Team Members</h2>
-            {(currentRole === "Admin" ||
-              (currentRole === "Manager" &&
-                getPermissions(currentRole).canManageUsers)) && (
+            {(role === "Admin" ||
+              (role === "Manager" &&
+                getPermissions(role).canManageUsers)) && (
               <Button
                 onClick={() => setIsAddModalOpen(true)}
                 className="flex items-center gap-2"
@@ -317,7 +320,7 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole: Role }) => {
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <div className="flex justify-end gap-2">
-                            {canManageMember(currentRole, member.role) && (
+                            {canManageMember(role, member.role) && (
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -327,7 +330,7 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole: Role }) => {
                                 <Pencil className="h-4 w-4" />
                               </Button>
                             )}
-                            {canDeleteMember(currentRole, member.role) && (
+                            {canDeleteMember(role, member.role) && (
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -378,7 +381,7 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole: Role }) => {
           open={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}
           onSubmit={handleAddMember}
-          currentRole={currentRole}
+          currentRole={role}
         />
 
         {editingMember && (
@@ -386,7 +389,7 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole: Role }) => {
             open={true}
             onClose={() => setEditingMember(null)}
             onSubmit={handleEditMember}
-            currentRole={currentRole}
+            currentRole={role}
             member={editingMember}
           />
         )}
@@ -419,15 +422,17 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole: Role }) => {
   );
 };
 
-const canManageMember = (currentRole: Role, memberRole: Role) => {
-  if (currentRole === "Admin") return true;
-  if (currentRole === "Manager" && memberRole === "User") return true;
+const canManageMember = (currentRole: Role | null, memberRole: Role) => {
+  const role = currentRole || "User";
+  if (role === "Admin") return true;
+  if (role === "Manager" && memberRole === "User") return true;
   return false;
 };
 
-const canDeleteMember = (currentRole: Role, memberRole: Role) => {
-  if (currentRole === "Admin") return true;
-  if (currentRole === "Manager" && memberRole === "User") return true;
+const canDeleteMember = (currentRole: Role | null, memberRole: Role) => {
+  const role = currentRole || "User";
+  if (role === "Admin") return true;
+  if (role === "Manager" && memberRole === "User") return true;
   return false;
 };
 

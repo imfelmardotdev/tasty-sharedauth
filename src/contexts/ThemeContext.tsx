@@ -29,7 +29,7 @@ const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
   const [color, setColor] = useState<ThemeColor>(() => {
     const savedColor = localStorage.getItem("themeColor") as ThemeColor;
-    return savedColor || "slate";
+    return savedColor || "black";
   });
 
   const [font, setFontState] = useState<ThemeFont>(() => {

@@ -36,4 +36,10 @@ export const rolePermissions = {
   },
 };
 
-export const getPermissions = (role: Role) => rolePermissions[role];
+export const getPermissions = (role: Role | null) => {
+  // Default to most restrictive role if null
+  if (!role) {
+    return rolePermissions["User"];
+  }
+  return rolePermissions[role];
+};
