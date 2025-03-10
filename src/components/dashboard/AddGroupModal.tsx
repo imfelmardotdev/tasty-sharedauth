@@ -99,6 +99,7 @@ const AddGroupModal = ({
               )}
             />
 
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel

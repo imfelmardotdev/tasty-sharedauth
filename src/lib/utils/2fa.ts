@@ -5,5 +5,9 @@ export const generateCode = () => {
 
 export const getTimeRemaining = () => {
   const now = new Date();
-  return 30 - (now.getSeconds() % 30);
+  const secondsIntoCurrentWindow = now.getSeconds() % 30;
+  const secondsUntilNextWindow = 30 - secondsIntoCurrentWindow;
+  
+  // Return the full window time when it's exactly at the boundary
+  return secondsUntilNextWindow === 0 ? 30 : secondsUntilNextWindow;
 };

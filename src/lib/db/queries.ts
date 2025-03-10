@@ -1,5 +1,5 @@
 import { supabase, supabaseAdmin } from "../supabase";
-import { User, Group, UserGroup, Code, Model, SharedModelLink } from "./types";
+import { User, Group, UserGroup, Code, Model, SharedModelLink, GroupCode } from "./types";
 import { type Role } from "@/lib/utils/roles";
 import { generateCode } from "@/lib/utils/2fa";
 
@@ -149,16 +149,16 @@ export const getGroups = async () => {
             .select("*", { count: "exact", head: true })
             .eq("group_id", group.id);
             
-          // Get codes
-          const { data: codes } = await supabase
-            .from("codes")
+          // Get group codes
+          const { data: groupCodes } = await supabase
+            .from("group_codes")
             .select("*")
             .eq("group_id", group.id);
 
           return {
             ...group,
             member_count: [{ count: count || 0 }],
-            codes: codes || []
+            group_codes: groupCodes || []
           };
         })
       );
@@ -196,16 +196,16 @@ export const getGroups = async () => {
             .select("*", { count: "exact", head: true })
             .eq("group_id", group.id);
             
-          // Get codes
-          const { data: codes } = await supabase
-            .from("codes")
+          // Get group codes
+          const { data: groupCodes } = await supabase
+            .from("group_codes")
             .select("*")
             .eq("group_id", group.id);
 
           return {
             ...group,
             member_count: [{ count: count || 0 }],
-            codes: codes || []
+            group_codes: groupCodes || []
           };
         })
       );
@@ -225,6 +225,194 @@ export const createGroup = async (group: Partial<Group>) => {
 
   if (error) throw error;
   return data as Group;
+};
+
+// Group Code queries
+export const createGroupCode = async (groupCode: Partial<GroupCode>) => {
+  try {
+    const { data, error } = await supabase
+      .from("group_codes")
+      .insert(groupCode)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as GroupCode;
+  } catch (error) {
+    console.error("Error creating group code:", error);
+    throw error;
+  }
+};
+
+export const getGroupCodes = async (groupId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from("group_codes")
+      .select("*")
+      .eq("group_id", groupId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    return data as GroupCode[];
+  } catch (error) {
+    console.error("Error fetching group codes:", error);
+    return [];
+  }
+};
+
+export const updateGroupCode = async (id: string, code: Partial<GroupCode>) => {
+  try {
+    const { data, error } = await supabase
+      .from("group_codes")
+      .update(code)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as GroupCode;
+  } catch (error) {
+    console.error("Error updating group code:", error);
+    throw error;
+  }
+};
+
+export const deleteGroupCode = async (id: string) => {
+  try {
+    const { error } = await supabase
+      .from("group_codes")
+      .delete()
+      .eq("id", id);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error("Error deleting group code:", error);
+    return false;
+  }
+};
+
+export const updateGroupCodeValue = async (id: string, code: string) => {
+  try {
+    // Get current session
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user?.id) {
+      console.error("No authenticated user");
+      return false;
+    }
+
+    // Update with new code and expiration
+    const updateData = {
+      code,
+      expires_at: new Date(Date.now() + 30000).toISOString()
+    };
+
+    const { error } = await supabase
+      .from('group_codes')
+      .update(updateData)
+      .eq('id', id);
+
+    if (error) {
+      if (error.message.includes('permission denied')) {
+        // Try with service role client as fallback
+        if (supabaseAdmin) {
+          const { error: adminError } = await supabaseAdmin
+            .from('group_codes')
+            .update(updateData)
+            .eq('id', id);
+
+          if (adminError) {
+            console.error("Admin update failed:", adminError);
+            return false;
+          }
+        } else {
+          console.error("No admin client available");
+          return false;
+        }
+      } else {
+        console.error("Update error:", error);
+        return false;
+      }
+    }
+
+    console.log(`Code updated for group code entry ${id}`);
+    return true;
+  } catch (error) {
+    console.error("Error updating group code:", error);
+    return false;
+  }
+};
+
+export const updateGroupCodeWithSecret = async (id: string) => {
+  try {
+    // Get current session
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user?.id) {
+      console.error("No authenticated user");
+      return false;
+    }
+
+    // First, get the code data to access the secret
+    const { data: codeData, error: fetchError } = await supabase
+      .from('group_codes')
+      .select('secret')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) {
+      console.error("Error fetching group code data:", fetchError);
+      return false;
+    }
+
+    if (!codeData || !codeData.secret) {
+      console.error("No secret found for group code");
+      return false;
+    }
+
+    // Generate new code using the secret
+    const { generateTOTP } = await import('@/lib/utils/totp');
+    const newCode = await generateTOTP(codeData.secret);
+
+    // Update with new code and expiration
+    const updateData = {
+      code: newCode,
+      expires_at: new Date(Date.now() + 30000).toISOString()
+    };
+
+    const { error } = await supabase
+      .from('group_codes')
+      .update(updateData)
+      .eq('id', id);
+
+    if (error) {
+      if (error.message.includes('permission denied')) {
+        // Try with service role client as fallback
+        if (supabaseAdmin) {
+          const { error: adminError } = await supabaseAdmin
+            .from('group_codes')
+            .update(updateData)
+            .eq('id', id);
+
+          if (adminError) {
+            console.error("Admin update failed:", adminError);
+            return false;
+          }
+        } else {
+          console.error("No admin client available");
+          return false;
+        }
+      } else {
+        console.error("Update error:", error);
+        return false;
+      }
+    }
+
+    console.log(`Code updated for group code entry ${id} using secret`);
+    return true;
+  } catch (error) {
+    console.error("Error updating group code with secret:", error);
+    return false;
+  }
 };
 
 export const deleteGroup = async (id: string) => {
@@ -369,6 +557,131 @@ export const updateModelCode = async (id: string, code: string) => {
     return true;
   } catch (error) {
     console.error("Error updating model:", error);
+    return false;
+  }
+};
+
+// Function to update code for a code entry (similar to updateModelCode)
+export const updateCodeValue = async (id: string, code: string) => {
+  try {
+    // Get current session
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user?.id) {
+      console.error("No authenticated user");
+      return false;
+    }
+
+    // Update with new code and expiration
+    const updateData = {
+      code,
+      expires_at: new Date(Date.now() + 30000).toISOString()
+    };
+
+    const { error } = await supabase
+      .from('codes')
+      .update(updateData)
+      .eq('id', id);
+
+    if (error) {
+      if (error.message.includes('permission denied')) {
+        // Try with service role client as fallback
+        if (supabaseAdmin) {
+          const { error: adminError } = await supabaseAdmin
+            .from('codes')
+            .update(updateData)
+            .eq('id', id);
+
+          if (adminError) {
+            console.error("Admin update failed:", adminError);
+            return false;
+          }
+        } else {
+          console.error("No admin client available");
+          return false;
+        }
+      } else {
+        console.error("Update error:", error);
+        return false;
+      }
+    }
+
+    console.log(`Code updated for code entry ${id}`);
+    return true;
+  } catch (error) {
+    console.error("Error updating code:", error);
+    return false;
+  }
+};
+
+// Function to update code for a code entry using the secret directly
+export const updateCodeWithSecret = async (id: string) => {
+  try {
+    // Get current session
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user?.id) {
+      console.error("No authenticated user");
+      return false;
+    }
+
+    // First, get the code data to access the secret
+    const { data: codeData, error: fetchError } = await supabase
+      .from('codes')
+      .select('secret')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) {
+      console.error("Error fetching code data:", fetchError);
+      return false;
+    }
+
+    if (!codeData || !codeData.secret) {
+      console.error("No secret found for code");
+      return false;
+    }
+
+    // Generate new code using the secret
+    const { generateTOTP } = await import('@/lib/utils/totp');
+    const newCode = await generateTOTP(codeData.secret);
+
+    // Update with new code and expiration
+    const updateData = {
+      code: newCode,
+      expires_at: new Date(Date.now() + 30000).toISOString()
+    };
+
+    const { error } = await supabase
+      .from('codes')
+      .update(updateData)
+      .eq('id', id);
+
+    if (error) {
+      if (error.message.includes('permission denied')) {
+        // Try with service role client as fallback
+        if (supabaseAdmin) {
+          const { error: adminError } = await supabaseAdmin
+            .from('codes')
+            .update(updateData)
+            .eq('id', id);
+
+          if (adminError) {
+            console.error("Admin update failed:", adminError);
+            return false;
+          }
+        } else {
+          console.error("No admin client available");
+          return false;
+        }
+      } else {
+        console.error("Update error:", error);
+        return false;
+      }
+    }
+
+    console.log(`Code updated for code entry ${id} using secret`);
+    return true;
+  } catch (error) {
+    console.error("Error updating code with secret:", error);
     return false;
   }
 };

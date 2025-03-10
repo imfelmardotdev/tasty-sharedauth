@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Clock } from "lucide-react";
-import { supabase } from "@/lib/supabase";
-import { generateCode } from "@/lib/utils/2fa";
-import { useDatabase } from "@/contexts/DatabaseContext";
+import { Progress } from "@/components/ui/progress";
+import { getTimeRemaining } from "@/lib/utils/totp";
+import { updateGroupCodeWithSecret } from "@/lib/db/queries";
 
 interface TimerProps {
   expiresAt: string;
@@ -12,52 +12,73 @@ interface TimerProps {
 }
 
 export const Timer: React.FC<TimerProps> = ({ expiresAt, codeId, groupId }) => {
-  const { refreshData } = useDatabase();
-  const [timeLeft, setTimeLeft] = useState<number>(0);
+  const [timeLeft, setTimeLeft] = useState<number>(30);
   const [isNearExpiry, setIsNearExpiry] = useState(false);
+  const [updateError, setUpdateError] = useState(false);
+  const [code, setCode] = useState<string>("");
 
   useEffect(() => {
-    const calculateTimeLeft = async () => {
-      const now = new Date().getTime();
-      const expiryTime = new Date(expiresAt).getTime();
-      const difference = expiryTime - now;
+    if (!codeId) return;
 
-      if (difference <= 0) {
-        setTimeLeft(0);
-        setIsNearExpiry(true);
+    let isActive = true;
+    let timerInterval: NodeJS.Timeout;
+    let forceUpdateInterval: NodeJS.Timeout;
 
-        if (codeId) {
-          // Generate new code when expired
-          const newCode = generateCode();
-          const { error } = await supabase
-            .from("codes")
-            .update({
-              code: newCode,
-              expires_at: new Date(Date.now() + 30000).toISOString(), // 30 seconds from now
-            })
-            .eq("id", codeId);
+    const updateCode = async () => {
+      if (!isActive) return;
 
-          if (!error) {
-            await refreshData();
-          }
+      try {
+        console.log("Updating code...");
+        // Update the code in the database using the same function as the models page
+        const success = await updateGroupCodeWithSecret(codeId);
+        
+        if (!isActive) return;
+        
+        if (!success) {
+          setUpdateError(true);
+          console.warn("Failed to update code in database");
+        } else {
+          setUpdateError(false);
+          console.log("Code updated successfully");
         }
-        return;
+      } catch (error) {
+        if (!isActive) return;
+        console.error("Error updating code:", error);
+        setUpdateError(true);
       }
-
-      setTimeLeft(Math.floor(difference / 1000));
-      setIsNearExpiry(difference <= 30000); // 30 seconds
     };
 
-    // Initial calculation
-    calculateTimeLeft();
+    const updateTimer = () => {
+      if (!isActive) return;
+      const remaining = getTimeRemaining();
+      setTimeLeft(remaining);
+      setIsNearExpiry(remaining <= 5);
 
-    // Update every second
-    const timer = setInterval(calculateTimeLeft, 1000);
+      // Update code when timer reaches 30 or 0
+      if (remaining === 30 || remaining === 0) {
+        console.log(`Timer reached ${remaining}, updating code`);
+        updateCode();
+      }
+    };
 
+    // Initial updates
+    updateTimer();
+    
+    // Force an update every 30 seconds regardless of timer state
+    forceUpdateInterval = setInterval(() => {
+      if (!isActive) return;
+      updateCode();
+    }, 30000);
+
+    // Set up interval for timer updates
+    timerInterval = setInterval(updateTimer, 1000);
+    
     return () => {
-      if (timer) clearInterval(timer);
+      isActive = false;
+      clearInterval(timerInterval);
+      clearInterval(forceUpdateInterval);
     };
-  }, [expiresAt, codeId, refreshData]);
+  }, [codeId]);
 
 
   const formatTime = (seconds: number) => {
@@ -102,17 +123,23 @@ export const Timer: React.FC<TimerProps> = ({ expiresAt, codeId, groupId }) => {
   };
 
   return (
-    <div className="relative inline-flex items-center gap-2 group">
-      <Badge
-        variant="secondary"
-        className={`flex items-center gap-2 px-3 py-1.5 font-medium text-sm transition-all duration-300 ${getTimerColor()}`}
-      >
-        <Clock className={`w-4 h-4 ${timeLeft === 0 ? "animate-pulse" : ""}`} />
-        <span className="tracking-wide">{formatTime(timeLeft)}</span>
-      </Badge>
-      {isNearExpiry && timeLeft > 0 && (
-        <span className="absolute -right-2 -top-1 w-2 h-2 bg-yellow-400 rounded-full animate-ping" />
-      )}
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <Badge
+          variant="secondary"
+          className={`flex items-center gap-2 px-3 py-1.5 font-medium text-sm transition-all duration-300 ${getTimerColor()}`}
+        >
+          <Clock className={`w-4 h-4 ${timeLeft === 0 ? "animate-pulse" : ""}`} />
+          <span className="tracking-wide">{timeLeft}s</span>
+        </Badge>
+        {isNearExpiry && timeLeft > 0 && (
+          <span className="w-2 h-2 bg-yellow-400 rounded-full animate-ping" />
+        )}
+      </div>
+      <Progress value={(timeLeft / 30) * 100} className="h-1" />
+      <div className="text-xs text-gray-500">
+        Refreshes in {timeLeft}s
+      </div>
     </div>
   );
 };

@@ -1,20 +1,21 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import TotpCode from "./TotpCode";
+import { GroupCode } from "@/lib/db/types";
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, ArrowLeft, Users, Copy, Share2, Trash2, Clock } from "lucide-react";
+import { ArrowLeft, Users, Copy, Share2, Trash2, QrCode, Plus } from "lucide-react";
 import Header from "../dashboard/Header";
 import Sidebar from "../layout/Sidebar";
 import { type Role } from "@/lib/utils/roles";
-import AddCodeModal from "../dashboard/AddCodeModal";
 import ShareModal from "../dashboard/ShareModal";
-import Timer from "./Timer";
+import AddCodeModal from "../dashboard/AddCodeModal";
+import Timer from "../group/Timer";
 import { useDatabase } from "@/contexts/DatabaseContext";
-import { generateCode } from "@/lib/utils/2fa";
+import { getGroupCodes, createGroupCode, deleteGroupCode } from "@/lib/db/queries";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/lib/supabase";
+import { getTimeRemaining } from "@/lib/utils/totp";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,18 +40,74 @@ const GroupManagement = () => {
   const currentRole = localStorage.getItem("userRole") as Role;
   const userId = localStorage.getItem("userId");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [sharingDetails, setSharedDetails] = useState<{
     id: string;
     title: string;
   } | null>(null);
+  const [groupCodes, setGroupCodes] = useState<GroupCode[]>([]);
+  const [isAddCodeModalOpen, setIsAddCodeModalOpen] = useState(false);
 
   const toggleMobileSidebar = () => setIsMobileSidebarOpen(prev => !prev);
 
   const { groups, loading, error, refreshData } = useDatabase();
   const group = groups.find((g) => g.id === id);
+  
+  // Add a state to force refresh
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  useEffect(() => {
+    if (id) {
+      fetchGroupCodes();
+    }
+  }, [id, refreshTrigger]);
+
+  // Set up a timer to refresh codes every 30 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setRefreshTrigger(prev => prev + 1);
+      fetchGroupCodes();
+    }, 30000);
+    
+    return () => clearInterval(timer);
+  }, [id]);
+
+  // Set up a timer to refresh based on the TOTP window
+  useEffect(() => {
+    const updateTimer = () => {
+      const remaining = getTimeRemaining();
+      
+      // Refresh codes when timer reaches 0
+      if (remaining === 0) {
+        console.log("Timer reached 0, refreshing codes");
+        fetchGroupCodes();
+      }
+    };
+    
+    // Set up interval for timer updates
+    const timerInterval = setInterval(updateTimer, 1000);
+    
+    return () => {
+      clearInterval(timerInterval);
+    };
+  }, [id]);
+  
+  const fetchGroupCodes = async () => {
+    if (!id) return;
+    
+    try {
+      const codes = await getGroupCodes(id);
+      setGroupCodes(codes);
+    } catch (err) {
+      console.error("Error fetching group codes:", err);
+      toast({
+        title: "Error",
+        description: "Failed to fetch group codes",
+        variant: "destructive",
+      });
+    }
+  };
 
   const canDeleteGroup =
     currentRole === "Admin" ||
@@ -100,70 +157,6 @@ const GroupManagement = () => {
     }
   };
 
-  const handleAddCode = async (values: any) => {
-    if (!group) return;
-
-    try {
-      const { data: groupExists, error: groupError } = await supabase
-        .from("groups")
-        .select("id")
-        .eq("id", group.id)
-        .single();
-
-      if (groupError || !groupExists) {
-        toast({
-          title: "Error",
-          description: "This group no longer exists",
-          variant: "destructive",
-        });
-        navigate("/groups");
-        return;
-      }
-
-      const expirationMap = {
-        "30s": 30,
-        "1m": 60,
-        "5m": 5 * 60,
-        "15m": 15 * 60,
-        "30m": 30 * 60,
-        "1h": 60 * 60,
-        "1d": 24 * 60 * 60,
-      };
-
-      const expirationSeconds = expirationMap[values.expiration] || 30;
-      const now = new Date();
-      const expiresAt = new Date(now.getTime() + expirationSeconds * 1000);
-
-      const { error } = await supabase.from("codes").insert({
-        group_id: group.id,
-        name: values.name || "Untitled Code",
-        code: values.code || generateCode(),
-        secret: values.secret || null,
-        notes: values.notes || "",
-        created_at: now.toISOString(),
-        expires_at: expiresAt.toISOString(),
-      });
-
-      if (error) {
-        console.error("Error adding code:", error);
-        throw error;
-      }
-
-      await refreshData();
-      setIsAddModalOpen(false);
-      toast({
-        title: "Success",
-        description: "Code added successfully",
-      });
-    } catch (err: any) {
-      console.error("Error adding code:", err);
-      toast({
-        title: "Error",
-        description: err.message || "Failed to add code",
-        variant: "destructive",
-      });
-    }
-  };
 
   if (loading) {
     return (
@@ -274,29 +267,62 @@ const GroupManagement = () => {
                 <Users className="w-3 h-3" />
                 <span>{group.member_count?.[0]?.count ?? 0} members</span>
               </Badge>
-              {canDeleteGroup && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8"
-                  onClick={() => setIsDeleteDialogOpen(true)}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              )}
-              <Button
-                onClick={() => setIsAddModalOpen(true)}
-                className="flex-1 sm:flex-initial flex items-center gap-2"
-                size="sm"
-              >
-                <Plus className="w-4 h-4" />
-                Add Code
-              </Button>
             </div>
           </div>
 
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-semibold">Group Details</h3>
+            <Button
+              onClick={() => setIsAddCodeModalOpen(true)}
+              className="flex items-center gap-2"
+              size="sm"
+            >
+              <Plus className="w-4 h-4" />
+              Add Code
+            </Button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <Card className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1.5">
+                    <h3 className="text-base font-semibold text-foreground">Group Information</h3>
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground">Created By</h4>
+                    <p className="text-base">{group.created_by}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground">Created At</h4>
+                    <p className="text-base">{new Date(group.created_at).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground">Members</h4>
+                    <p className="text-base">{group.member_count?.[0]?.count ?? 0} members</p>
+                  </div>
+                  {group.description && (
+                    <div>
+                      <h4 className="text-sm font-medium text-muted-foreground">Description</h4>
+                      <p className="text-base">{group.description}</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <h3 className="text-xl font-semibold mb-4">Authentication Codes</h3>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {group.codes?.map((code) => (
+            {groupCodes.map((code) => (
               <Card
                 key={code.id}
                 className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden group h-[280px] sm:h-[320px]"
@@ -312,7 +338,12 @@ const GroupManagement = () => {
                       
                       <div className="text-xs text-muted-foreground/80 flex flex-col sm:flex-row sm:items-center gap-2">
                         <span className="truncate">Created {new Date(code.created_at).toLocaleString()}</span>
-                        <Timer expiresAt={code.expires_at} codeId={code.id} groupId={group.id} />
+                        {code.secret && (
+                          <Badge variant="outline" className="flex items-center gap-1">
+                            <QrCode className="w-3 h-3" />
+                            <span>TOTP</span>
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -320,10 +351,15 @@ const GroupManagement = () => {
 
                 <CardContent>
                   <div className="flex flex-col items-center justify-center space-y-4 sm:space-y-6">
-                    <div className="w-full p-4 sm:p-6 bg-background/90 backdrop-blur-sm rounded-xl border border-border/50 shadow-inner flex justify-center">
+                    <div className="w-full p-4 sm:p-6 bg-background/90 backdrop-blur-sm rounded-xl border border-border/50 shadow-inner flex flex-col items-center justify-center gap-4">
                       <div className="text-2xl sm:text-4xl font-mono tracking-[0.25em] sm:tracking-[0.5em] text-primary font-bold break-all sm:break-normal">
                         {code.code}
                       </div>
+                      {code.expires_at && (
+                        <div className="mt-2">
+                          <Timer expiresAt={code.expires_at} codeId={code.id} />
+                        </div>
+                      )}
                     </div>
                     
                     {code.notes && (
@@ -392,14 +428,8 @@ const GroupManagement = () => {
                           className="flex items-center gap-1.5 hover:bg-destructive/10 hover:text-destructive transition-colors px-2.5 h-8"
                           onClick={async () => {
                             try {
-                              const { error } = await supabase
-                                .from("codes")
-                                .delete()
-                                .eq("id", code.id);
-
-                              if (error) throw error;
-
-                              await refreshData();
+                              await deleteGroupCode(code.id);
+                              await fetchGroupCodes();
                               toast({
                                 title: "Success",
                                 description: "Code deleted successfully",
@@ -427,7 +457,7 @@ const GroupManagement = () => {
               </Card>
             ))}
 
-            {(!group.codes || group.codes.length === 0) && (
+            {groupCodes.length === 0 && (
               <div className="col-span-full text-center text-muted-foreground py-8">
                 No codes found. Click "Add Code" to create one.
               </div>
@@ -435,10 +465,43 @@ const GroupManagement = () => {
           </div>
         </div>
 
+
         <AddCodeModal
-          open={isAddModalOpen}
-          onClose={() => setIsAddModalOpen(false)}
-          onSubmit={handleAddCode}
+          open={isAddCodeModalOpen}
+          onClose={() => setIsAddCodeModalOpen(false)}
+          onSubmit={async (values) => {
+            try {
+              // Create a new group code
+              await createGroupCode({
+                group_id: group.id,
+                name: values.name || "Untitled Code",
+                code: values.code || "",
+                secret: values.secret || null,
+                notes: values.notes || "",
+                created_at: new Date().toISOString(),
+                expires_at: new Date(Date.now() + 30000).toISOString(),
+              });
+              
+              // Refresh the group codes
+              await fetchGroupCodes();
+              
+              // Close the modal
+              setIsAddCodeModalOpen(false);
+              
+              // Show success toast
+              toast({
+                title: "Success",
+                description: "Code added successfully",
+              });
+            } catch (err) {
+              console.error("Error adding code:", err);
+              toast({
+                title: "Error",
+                description: "Failed to add code",
+                variant: "destructive",
+              });
+            }
+          }}
         />
 
         <ShareModal

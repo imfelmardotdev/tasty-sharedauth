@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { generateTOTP, getTimeRemaining } from "@/lib/utils/totp";
 import { Progress } from "@/components/ui/progress";
-import { updateModelCode } from "@/lib/db/queries";
+import { updateGroupCodeWithSecret } from "@/lib/db/queries";
 
-interface TOTPDisplayProps {
+interface GroupTOTPDisplayProps {
   secret: string | null;
-  modelId: string;
+  groupId: string;
 }
 
-const TOTPDisplay = ({ secret, modelId }: TOTPDisplayProps) => {
+const GroupTOTPDisplay = ({ secret, groupId }: GroupTOTPDisplayProps) => {
   const [code, setCode] = useState<string>("");
   const [updateError, setUpdateError] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(30);
@@ -30,12 +30,12 @@ const TOTPDisplay = ({ secret, modelId }: TOTPDisplayProps) => {
         setCode(newCode);
         
         // Try to update the database
-        const updated = await updateModelCode(modelId, newCode);
+        const updated = await updateGroupCodeWithSecret(groupId);
         if (!isActive) return;
 
         if (!updated) {
           setUpdateError(true);
-          console.warn("Failed to update model code in database");
+          console.warn("Failed to update group code in database");
         } else {
           setUpdateError(false);
         }
@@ -76,7 +76,7 @@ const TOTPDisplay = ({ secret, modelId }: TOTPDisplayProps) => {
       clearInterval(timerInterval);
       clearInterval(forceUpdateInterval);
     };
-  }, [secret, modelId]);
+  }, [secret, groupId]);
 
   if (!secret) {
     return null;
@@ -93,4 +93,4 @@ const TOTPDisplay = ({ secret, modelId }: TOTPDisplayProps) => {
   );
 };
 
-export default TOTPDisplay;
+export default GroupTOTPDisplay;

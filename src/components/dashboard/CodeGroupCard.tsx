@@ -16,21 +16,21 @@ import {
 } from "@/components/ui/tooltip";
 import { Copy, Share2, Clock, Users, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import Timer from "@/components/group/Timer";
+import Timer from "../group/Timer";
 
 interface CodeGroupCardProps {
   id?: string;
   currentRole?: "Admin" | "Manager" | "User";
   title?: string;
   description?: string;
-  codes?: {
+  group_codes?: {
     id: string;
     name: string;
     code: string;
-    notes?: string;
-    expires_at: string;
+    secret?: string | null;
+    created_at: string;
+    expires_at?: string;
   }[];
-  timeRemaining?: number;
   memberCount?: number;
   onCopy?: () => void;
   onShare?: () => void;
@@ -40,15 +40,14 @@ const CodeGroupCard = ({
   id = "default",
   title = "Default Group",
   description,
-  codes = [],
-  timeRemaining = 30,
+  group_codes = [],
   memberCount = 0,
   onCopy = () => console.log("Copy clicked"),
   onShare = () => console.log("Share clicked"),
   currentRole = "User",
 }: CodeGroupCardProps) => {
   const navigate = useNavigate();
-  const expiryTime = codes[0]?.expires_at;
+  const [timeRemaining, setTimeRemaining] = React.useState(30);
 
   return (
     <Card className="w-[380px] h-[240px] bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden group">
@@ -75,12 +74,15 @@ const CodeGroupCard = ({
               <Users className="w-3 h-3 text-primary/70" />
               <span className="font-medium">{memberCount}</span>
             </Badge>
-            {expiryTime && (
-              <Timer
-                expiresAt={expiryTime}
-                codeId={codes[0]?.id}
-                groupId={id}
-              />
+            {group_codes.some(code => code.secret && code.expires_at) && (
+              <div>
+                {group_codes.filter(code => code.secret && code.expires_at)[0] && (
+                  <Timer 
+                    expiresAt={group_codes.filter(code => code.secret && code.expires_at)[0].expires_at || new Date().toISOString()} 
+                    codeId={group_codes.filter(code => code.secret && code.expires_at)[0].id}
+                  />
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -88,17 +90,23 @@ const CodeGroupCard = ({
 
       <CardContent>
         <div className="flex flex-col items-center justify-center h-24 space-y-2 relative">
-          {codes[0]?.name && (
-            <div className="text-sm font-medium text-muted-foreground/90">
-              {codes[0].name}
-            </div>
-          )}
-          <div className="text-4xl font-mono tracking-[0.5em] text-primary font-bold bg-primary/5 px-6 py-3 rounded-lg shadow-sm">
-            {codes[0]?.code || "------"}
-          </div>
-          {codes[0]?.notes && (
-            <div className="text-xs text-muted-foreground/70 truncate max-w-full italic">
-              {codes[0].notes}
+          {group_codes.length > 0 ? (
+            <>
+              <div className="text-sm font-medium text-muted-foreground/90">
+                {group_codes[0].name}
+              </div>
+              <div className="text-4xl font-mono tracking-[0.5em] text-primary font-bold bg-primary/5 px-6 py-3 rounded-lg shadow-sm">
+                {group_codes[0].code || "------"}
+              </div>
+              {group_codes[0].secret && (
+                <div className="text-xs text-muted-foreground/70 truncate max-w-full">
+                  Time-based One-Time Password (TOTP)
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-muted-foreground text-center">
+              No codes available
             </div>
           )}
         </div>

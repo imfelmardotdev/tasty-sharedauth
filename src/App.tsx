@@ -70,7 +70,9 @@ function AppContent() {
                 element={
                   <AuthGuard>
                     <DatabaseProvider>
-                      <GroupsPage />
+                      <GroupProvider>
+                        <GroupsPage />
+                      </GroupProvider>
                     </DatabaseProvider>
                   </AuthGuard>
                 }
@@ -80,7 +82,9 @@ function AppContent() {
                 element={
                   <AuthGuard>
                     <DatabaseProvider>
-                      <GroupManagement />
+                      <GroupProvider>
+                        <GroupManagement />
+                      </GroupProvider>
                     </DatabaseProvider>
                   </AuthGuard>
                 }

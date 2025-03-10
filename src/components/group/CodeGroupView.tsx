@@ -5,17 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import {
   Copy,
   Users,
-  History,
   Share2,
-  ChevronRight,
-  ChevronDown,
   FolderClosed,
   FolderOpen,
   Plus,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Code } from "@/lib/db/types";
-import CodeTimer from "@/components/group/Timer";
+import CodeTOTPDisplay from "./CodeTOTPDisplay";
+import Timer from "./Timer";
 import Header from "../dashboard/Header";
 import Sidebar from "../layout/Sidebar";
 import { type Role } from "@/lib/utils/roles";
@@ -136,8 +134,20 @@ const CodeGroupView = ({ group, onShare, onAddCode }: CodeGroupViewProps) => {
                                 hour12: true
                               })}
                             </div>
-                            <div className="text-sm text-muted-foreground/90">
-                              <CodeTimer expiresAt={code.expires_at} />
+                            <div className="text-sm text-muted-foreground/90 flex items-center gap-2">
+                              {code.secret ? (
+                                <CodeTOTPDisplay 
+                                  secret={code.secret}
+                                  codeId={code.id}
+                                />
+                              ) : (
+                                <div className="text-xs text-gray-500">
+                                  No 2FA configured
+                                </div>
+                              )}
+                              {code.expires_at && (
+                                <Timer expiresAt={code.expires_at} codeId={code.id} />
+                              )}
                             </div>
                           </div>
                         </div>

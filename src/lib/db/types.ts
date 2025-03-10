@@ -17,6 +17,7 @@ export interface Group {
   created_at: string;
   created_by: string;
   codes?: Code[];
+  group_codes?: GroupCode[];
   member_count?: [{ count: number }];
   user_groups?: [{ count: number }];
 }
@@ -47,6 +48,20 @@ export interface Code {
   created_at: string;
   expires_at: string;
   secret?: string | null;
+}
+
+export interface GroupCode {
+  id: string;
+  group_id: string;
+  name: string;
+  code: string;
+  secret?: string | null;
+  notes?: string;
+  algorithm?: string;
+  digits?: number;
+  period?: number;
+  created_at: string;
+  expires_at: string;
 }
 
 export interface SharedModelLink {

@@ -128,5 +128,10 @@ export async function generateTOTP(
 
 // Get remaining time until next TOTP rotation
 export function getTimeRemaining(window = 30): number {
-  return window - (Math.floor(Date.now() / 1000) % window);
+  const currentSeconds = Math.floor(Date.now() / 1000);
+  const secondsIntoCurrentWindow = currentSeconds % window;
+  const secondsUntilNextWindow = window - secondsIntoCurrentWindow;
+  
+  // Return the full window time when it's exactly at the boundary
+  return secondsUntilNextWindow === 0 ? window : secondsUntilNextWindow;
 }

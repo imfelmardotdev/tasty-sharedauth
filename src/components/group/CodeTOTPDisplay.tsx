@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { generateTOTP, getTimeRemaining } from "@/lib/utils/totp";
 import { Progress } from "@/components/ui/progress";
-import { updateModelCode } from "@/lib/db/queries";
+import { updateCodeWithSecret } from "@/lib/db/queries";
 
-interface TOTPDisplayProps {
+interface CodeTOTPDisplayProps {
   secret: string | null;
-  modelId: string;
+  codeId: string;
 }
 
-const TOTPDisplay = ({ secret, modelId }: TOTPDisplayProps) => {
+const CodeTOTPDisplay = ({ secret, codeId }: CodeTOTPDisplayProps) => {
   const [code, setCode] = useState<string>("");
   const [updateError, setUpdateError] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(30);
@@ -24,18 +24,22 @@ const TOTPDisplay = ({ secret, modelId }: TOTPDisplayProps) => {
       if (!isActive) return;
 
       try {
+        // Generate TOTP code using the secret
         const newCode = await generateTOTP(secret);
-        if (!isActive) return; // Check again before state updates
         
+        if (!isActive) return;
+        
+        // Update local state
         setCode(newCode);
         
-        // Try to update the database
-        const updated = await updateModelCode(modelId, newCode);
+        // Update the database using the secret directly
+        const updated = await updateCodeWithSecret(codeId);
+        
         if (!isActive) return;
-
+        
         if (!updated) {
           setUpdateError(true);
-          console.warn("Failed to update model code in database");
+          console.warn("Failed to update code in database");
         } else {
           setUpdateError(false);
         }
@@ -76,7 +80,7 @@ const TOTPDisplay = ({ secret, modelId }: TOTPDisplayProps) => {
       clearInterval(timerInterval);
       clearInterval(forceUpdateInterval);
     };
-  }, [secret, modelId]);
+  }, [secret, codeId]);
 
   if (!secret) {
     return null;
@@ -93,4 +97,4 @@ const TOTPDisplay = ({ secret, modelId }: TOTPDisplayProps) => {
   );
 };
 
-export default TOTPDisplay;
+export default CodeTOTPDisplay;

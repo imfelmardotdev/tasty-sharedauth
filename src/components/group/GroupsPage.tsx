@@ -9,8 +9,7 @@ import Sidebar from "../layout/Sidebar";
 import AddGroupModal from "../dashboard/AddGroupModal";
 import ShareModal from "../dashboard/ShareModal";
 import { useDatabase } from "@/contexts/DatabaseContext";
-import { createGroup, createCode, addUserToGroup, deleteGroup } from "@/lib/db/queries";
-import { generateCode } from "@/lib/utils/2fa";
+import { createGroup, addUserToGroup, deleteGroup } from "@/lib/db/queries";
 import { supabase } from "@/lib/supabase";
 import { type Role } from "@/lib/utils/roles";
 import { useToast } from "@/components/ui/use-toast";
@@ -182,7 +181,7 @@ const GroupsPage = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-muted-foreground">
-                    {group.codes?.length || 0} code{group.codes?.length !== 1 ? 's' : ''} available
+                    {group.group_codes?.length || 0} code{group.group_codes?.length !== 1 ? 's' : ''} available
                   </div>
                 </CardContent>
               </Card>
@@ -205,7 +204,7 @@ const GroupsPage = () => {
                 title: values.name,
                 description: values.description,
                 created_by: userId,
-                created_at: new Date().toISOString(),
+                created_at: new Date().toISOString()
               });
               
               // Add creator to group's user_groups
