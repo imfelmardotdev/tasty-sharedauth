@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Key, Menu } from "lucide-react";
 import { type Role } from "@/lib/utils/roles";
+import { useNavigate } from "react-router-dom";
 
 interface HeaderProps {
   currentRole?: Role;
@@ -9,6 +10,7 @@ interface HeaderProps {
 }
 
 const Header = ({ currentRole = "User", toggleMobileSidebar }: HeaderProps) => {
+  const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(false);
 
   // Check if screen is mobile on mount and when window resizes
@@ -38,9 +40,17 @@ const Header = ({ currentRole = "User", toggleMobileSidebar }: HeaderProps) => {
             <Menu className="h-5 w-5" />
           </Button>
         )}
-        <Key className="w-6 h-6 text-primary" />
-        <h1 className="text-xl font-semibold hidden sm:inline">Sharedauth Management</h1>
-        <h1 className="text-xl font-semibold sm:hidden">Sharedauth</h1>
+        <Button
+          variant="ghost"
+          className="p-0 hover:bg-transparent"
+          onClick={() => navigate('/dashboard')}
+        >
+          <div className="flex items-center gap-2">
+            <Key className="w-6 h-6 text-primary" />
+            <h1 className="text-xl font-semibold hidden sm:inline">Sharedauth Management</h1>
+            <h1 className="text-xl font-semibold sm:hidden">Sharedauth</h1>
+          </div>
+        </Button>
       </div>
 
       <div className="flex items-center gap-4">

@@ -104,7 +104,8 @@ const Sidebar = ({
       {/* Sidebar */}
       <div
         className={cn(
-          "w-64 h-screen bg-background border-r border-border fixed left-0 top-0 pt-16 z-50",
+          "h-screen bg-background border-r border-border fixed left-0 top-0 pt-16 z-50",
+          isMobile ? "w-80" : "w-64",
           "transition-transform duration-300 ease-in-out",
           isMobile && !isMobileSidebarOpen && "-translate-x-full",
           isMobile && "shadow-xl",
