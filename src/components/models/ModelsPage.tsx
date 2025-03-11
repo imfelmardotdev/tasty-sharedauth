@@ -8,7 +8,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Share2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, Pencil, Trash2, Share2, X } from "lucide-react";
 import Header from "../dashboard/Header";
 import TOTPDisplay from "./TOTPDisplay";
 import Sidebar from "../layout/Sidebar";
@@ -43,10 +44,16 @@ const ModelsPage = () => {
   const [loading, setLoading] = useState(true);
   const [sharingModel, setSharingModel] = useState<Model | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   
   const toggleMobileSidebar = useCallback(() => {
     setIsMobileSidebarOpen(prev => !prev);
   }, []);
+
+  const filteredModels = models.filter(model => 
+    model.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    model.username.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const fetchModels = async () => {
     try {
@@ -266,21 +273,42 @@ const ModelsPage = () => {
 
       <main className="flex-1 md:ml-64 ml-0 pt-16 px-2 sm:px-4 container mx-auto max-w-7xl bg-background min-h-screen">
         <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-semibold">Models</h2>
-            <Button
-              variant="default"
-              onClick={() => setIsAddModalOpen(true)}
-              className="hidden md:flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Add Model
-            </Button>
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
+            <div className="flex justify-between items-center w-full">
+              <h2 className="text-2xl font-semibold">Models</h2>
+              <Button
+                variant="default"
+                onClick={() => setIsAddModalOpen(true)}
+                className="hidden md:flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Add Model
+              </Button>
+            </div>
+            <div className="w-full sm:w-[300px]">
+              <div className="relative">
+                <Input
+                  placeholder="Search models..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 h-auto p-1"
+                    onClick={() => setSearchQuery("")}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Mobile View */}
           <div className="block lg:hidden space-y-4">
-            {models.map((model) => (
+            {filteredModels.map((model) => (
               <div key={model.id} className="border rounded-lg p-4 space-y-4 bg-card">
                 <div className="flex items-start justify-between">
                   <div>
@@ -370,7 +398,7 @@ const ModelsPage = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {models.map((model) => (
+                {filteredModels.map((model) => (
                   <TableRow key={model.id}>
                     <TableCell>{model.name}</TableCell>
                     <TableCell>{model.username}</TableCell>

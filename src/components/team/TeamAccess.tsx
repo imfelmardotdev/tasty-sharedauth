@@ -8,6 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Command,
   CommandEmpty,
@@ -20,7 +21,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
@@ -62,6 +63,7 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => 
   const [deletingMember, setDeletingMember] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [nameSearchQuery, setNameSearchQuery] = useState("");
   
   // Ensure we have a valid role, defaulting to User if null/undefined
   const role = currentRole || "User";
@@ -71,11 +73,24 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => 
   , [members]);
 
   const filteredMembers = useMemo(() => {
-    if (selectedGroups.length === 0) return members;
-    return members.filter(member => 
-      member.groupNames?.some(group => selectedGroups.includes(group))
-    );
-  }, [members, selectedGroups]);
+    let filtered = members;
+    
+    // Apply name search filter
+    if (nameSearchQuery) {
+      filtered = filtered.filter(member => 
+        member.name.toLowerCase().includes(nameSearchQuery.toLowerCase())
+      );
+    }
+    
+    // Apply group filter
+    if (selectedGroups.length > 0) {
+      filtered = filtered.filter(member => 
+        member.groupNames?.some(group => selectedGroups.includes(group))
+      );
+    }
+    
+    return filtered;
+  }, [members, selectedGroups, nameSearchQuery]);
 
   const toggleMobileSidebar = useCallback(() => {
     setIsMobileSidebarOpen(prev => !prev);
@@ -291,8 +306,28 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => 
                 Add Member
               </Button>
             </div>
-            <div className="w-full sm:w-[300px]">
-              <Popover>
+            <div className="flex gap-2 items-center w-full sm:w-auto">
+              <div className="flex-1 sm:w-[200px]">
+                <div className="relative">
+                  <Input
+                    placeholder="Search by name..."
+                    value={nameSearchQuery}
+                    onChange={(e) => setNameSearchQuery(e.target.value)}
+                  />
+                  {nameSearchQuery && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-auto p-1"
+                      onClick={() => setNameSearchQuery("")}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div className="w-full sm:w-[200px]">
+                <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -339,6 +374,7 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => 
                   </Command>
                 </PopoverContent>
               </Popover>
+              </div>
             </div>
           </div>
 

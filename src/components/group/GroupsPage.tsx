@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FolderPlus, Users, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { FolderPlus, Users, Trash2, X } from "lucide-react";
 import Header from "../dashboard/Header";
 import Sidebar from "../layout/Sidebar";
 import FloatingActionBar from "../ui/floating-action-bar";
@@ -33,6 +34,7 @@ const GroupsPage = () => {
   const [isAddGroupModalOpen, setIsAddGroupModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const toggleMobileSidebar = () => setIsMobileSidebarOpen(prev => !prev);
   const [selectedGroup, setSelectedGroup] = useState<{
@@ -134,8 +136,32 @@ const GroupsPage = () => {
             </Button>
           </div>
 
+          <div className="mb-4">
+            <div className="relative max-w-sm">
+              <Input
+                placeholder="Search groups..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-auto p-1"
+                  onClick={() => setSearchQuery("")}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {groups.map((group) => (
+            {groups
+              .filter(group => 
+                group.title.toLowerCase().includes(searchQuery.toLowerCase())
+              )
+              .map((group) => (
               <Card 
                 key={group.id} 
                 className="bg-card hover:bg-card/80 cursor-pointer transition-colors"
