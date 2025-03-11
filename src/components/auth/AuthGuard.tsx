@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useEffect, useState } from "react";
+import MobileNavBar from "@/components/layout/MobileNavBar";
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -29,7 +30,14 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
     return <Navigate to="/signin" state={{ from: location }} replace />;
   }
 
-  return <>{children}</>;
+  const userRole = localStorage.getItem("userRole") as "Admin" | "Manager" | "User";
+  
+  return (
+    <>
+      {children}
+      <MobileNavBar currentRole={userRole} />
+    </>
+  );
 };
 
 export default AuthGuard;

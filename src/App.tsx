@@ -36,7 +36,7 @@ function AppContent() {
       <DatabaseProvider>
         <GroupProvider>
         <Suspense fallback={<LoadingScreen />}>
-          <div className={`min-h-screen bg-background text-foreground antialiased font-${font}`}>
+          <div className={`min-h-screen pb-16 md:pb-0 bg-background text-foreground antialiased font-${font}`}>
            
             <Routes>
               <Route path="/signin" element={<SignIn />} />
