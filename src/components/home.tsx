@@ -8,9 +8,10 @@ import AddCodeModal from "./dashboard/AddCodeModal";
 import ShareModal from "./dashboard/ShareModal";
 import StatsCard from "./dashboard/StatsCard";
 import { Button } from "@/components/ui/button";
-import { Plus, Users, FolderClosed, KeyRound, Share2 } from "lucide-react";
+import { Plus, Users, FolderClosed, KeyRound, Share2, PuzzleIcon } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useDatabase } from "@/contexts/DatabaseContext";
-import { createGroup, createCode } from "@/lib/db/queries";
+import { createGroup, createGroupCode } from "@/lib/db/queries";
 import { supabase } from "@/lib/supabase";
 import { useAuthGuard } from "@/lib/hooks/useAuthGuard";
 import { Loader2 } from "lucide-react";
@@ -22,6 +23,7 @@ interface HomeProps {
 const Home = ({ initialRole = "User" }: HomeProps) => {
   // Use the improved auth guard
   const { loading: authLoading, isAuthenticated } = useAuthGuard();
+  const navigate = useNavigate();
   
   const [currentRole, setCurrentRole] = useState<Role>(
     (localStorage.getItem("userRole") as Role) || initialRole,
@@ -39,7 +41,7 @@ const Home = ({ initialRole = "User" }: HomeProps) => {
     totalSharedLinks: 0,
   });
 
-  const { groups, loading, error, refreshData } = useDatabase();
+  const { groups, models, loading, error, refreshData } = useDatabase();
   const [localGroups, setLocalGroups] = useState(groups);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   
@@ -85,9 +87,9 @@ const Home = ({ initialRole = "User" }: HomeProps) => {
           .from("shared_links")
           .select("*", { count: "exact", head: true });
 
-        // Calculate total codes
+        // Calculate total codes from group_codes
         const totalCodes = groups.reduce(
-          (sum, group) => sum + (group.codes?.length || 0),
+          (sum, group) => sum + (group.group_codes?.length || 0),
           0,
         );
 
@@ -154,7 +156,7 @@ const Home = ({ initialRole = "User" }: HomeProps) => {
 
       const expirationMs = expirationMap[values.expiration] || 30 * 1000;
 
-      await createCode({
+      await createGroupCode({
         group_id: groupId,
         name: values.name,
         code: values.code || generateCode(),
@@ -178,10 +180,10 @@ const Home = ({ initialRole = "User" }: HomeProps) => {
     }
   };
 
-  const handleCopy = async (id: string) => {
+    const handleCopy = async (id: string) => {
     const group = localGroups.find((g) => g.id === id);
-    if (group && group.codes?.[0]) {
-      await navigator.clipboard.writeText(group.codes[0].code);
+    if (group && group.group_codes?.[0]) {
+      await navigator.clipboard.writeText(group.group_codes[0].code);
     }
   };
 
@@ -228,6 +230,7 @@ const Home = ({ initialRole = "User" }: HomeProps) => {
               value={stats.totalGroups}
               icon={FolderClosed}
               description="Active Sharedauth groups"
+              onClick={() => navigate('/groups')}
             />
             <StatsCard
               title="Total Codes"
@@ -241,14 +244,23 @@ const Home = ({ initialRole = "User" }: HomeProps) => {
                 value={stats.totalMembers}
                 icon={Users}
                 description="Total team members"
+                onClick={() => navigate('/team')}
               />
             )}
+            <StatsCard
+              title="Extensions"
+              value={models.length}
+              icon={PuzzleIcon}
+              description="Active extensions"
+              onClick={() => navigate('/models')}
+            />
             {currentRole === "Admin" && (
               <StatsCard
                 title="Shared Links"
                 value={stats.totalSharedLinks}
                 icon={Share2}
                 description="Active shared links"
+                onClick={() => navigate('/shared-links')}
               />
             )}
           </div>

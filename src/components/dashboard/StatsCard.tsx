@@ -6,6 +6,7 @@ interface StatsCardProps {
   value: number;
   icon: LucideIcon;
   description?: string;
+  onClick?: () => void;
 }
 
 const StatsCard = ({
@@ -13,9 +14,13 @@ const StatsCard = ({
   value,
   icon: Icon,
   description,
+  onClick,
 }: StatsCardProps) => {
   return (
-    <Card>
+    <Card 
+      className={`${onClick ? 'cursor-pointer hover:border-primary/50 transition-colors' : ''}`}
+      onClick={onClick}
+    >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
         <Icon className="h-4 w-4 text-muted-foreground" />

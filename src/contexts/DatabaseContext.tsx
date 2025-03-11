@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { User, Group, Code } from "@/lib/db/types";
-import { getGroups } from "@/lib/db/queries";
+import { User, Group, Code, Model } from "@/lib/db/types";
+import { getGroups, getModels } from "@/lib/db/queries";
 
 interface DatabaseContextType {
   groups: Group[];
   codes: Code[];
+  models: Model[];
   loading: boolean;
   error: Error | null;
   refreshData: () => Promise<void>;
@@ -22,14 +23,20 @@ const DatabaseProvider = ({
 }) => {
   const [groups, setGroups] = useState<Group[]>([]);
   const [codes, setCodes] = useState<Code[]>([]);
+  const [models, setModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   const refreshData = async () => {
     try {
       setLoading(true);
-      const groupsData = await getGroups();
+      const [groupsData, modelsData] = await Promise.all([
+        getGroups(),
+        getModels()
+      ]);
+
       setGroups(groupsData);
+      setModels(modelsData);
 
       // Extract codes from groups
       const allCodes = groupsData.flatMap((g) => g.codes || []);
@@ -82,7 +89,7 @@ const DatabaseProvider = ({
 
   return (
     <DatabaseContext.Provider
-      value={{ groups, codes, loading, error, refreshData }}
+      value={{ groups, codes, models, loading, error, refreshData }}
     >
       {children}
     </DatabaseContext.Provider>
