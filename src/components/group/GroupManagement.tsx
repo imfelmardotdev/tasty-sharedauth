@@ -11,11 +11,11 @@ import { type Role } from "@/lib/utils/roles";
 import ShareModal from "../dashboard/ShareModal";
 import AddCodeModal from "../dashboard/AddCodeModal";
 import Timer from "../group/Timer";
+import GroupTOTPDisplay from "../group/GroupTOTPDisplay";
 import { useDatabase } from "@/contexts/DatabaseContext";
 import { getGroupCodes, createGroupCode, deleteGroupCode } from "@/lib/db/queries";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/lib/supabase";
-import { getTimeRemaining } from "@/lib/utils/totp";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,36 +63,6 @@ const GroupManagement = () => {
     }
   }, [id, refreshTrigger]);
 
-  // Set up a timer to refresh codes every 30 seconds
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setRefreshTrigger(prev => prev + 1);
-      fetchGroupCodes();
-    }, 30000);
-    
-    return () => clearInterval(timer);
-  }, [id]);
-
-  // Set up a timer to refresh based on the TOTP window
-  useEffect(() => {
-    const updateTimer = () => {
-      const remaining = getTimeRemaining();
-      
-      // Refresh codes when timer reaches 0
-      if (remaining === 0) {
-        console.log("Timer reached 0, refreshing codes");
-        fetchGroupCodes();
-      }
-    };
-    
-    // Set up interval for timer updates
-    const timerInterval = setInterval(updateTimer, 1000);
-    
-    return () => {
-      clearInterval(timerInterval);
-    };
-  }, [id]);
-  
   const fetchGroupCodes = async () => {
     if (!id) return;
     
@@ -352,12 +322,18 @@ const GroupManagement = () => {
                 <CardContent>
                   <div className="flex flex-col items-center justify-center space-y-4 sm:space-y-6">
                     <div className="w-full p-4 sm:p-6 bg-background/90 backdrop-blur-sm rounded-xl border border-border/50 shadow-inner flex flex-col items-center justify-center gap-4">
-                      <div className="text-2xl sm:text-4xl font-mono tracking-[0.25em] sm:tracking-[0.5em] text-primary font-bold break-all sm:break-normal">
-                        {code.code}
-                      </div>
-                      {code.expires_at && (
-                        <div className="mt-2">
-                          <Timer expiresAt={code.expires_at} codeId={code.id} />
+                      {code.secret ? (
+                        <GroupTOTPDisplay secret={code.secret} codeId={code.id} />
+                      ) : (
+                        <div>
+                          <div className="text-2xl sm:text-4xl font-mono tracking-[0.25em] sm:tracking-[0.5em] text-primary font-bold break-all sm:break-normal">
+                            {code.code}
+                          </div>
+                          {code.expires_at && (
+                            <div className="mt-2">
+                              <Timer expiresAt={code.expires_at} codeId={code.id} />
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -381,7 +357,11 @@ const GroupManagement = () => {
                           size="sm"
                           className="flex items-center gap-1.5 hover:bg-primary/10 hover:text-primary transition-colors px-2.5 h-8"
                           onClick={() => {
-                            navigator.clipboard.writeText(code.code);
+                            const codeElement = document.querySelector(
+                              `[data-code-id="${code.id}"] .font-mono`
+                            );
+                            const textToCopy = codeElement ? codeElement.textContent || code.code : code.code;
+                            navigator.clipboard.writeText(textToCopy);
                             toast({
                               title: "Code copied!",
                               description: "The code has been copied to your clipboard.",
