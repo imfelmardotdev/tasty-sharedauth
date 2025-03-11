@@ -4,8 +4,11 @@ import Sidebar from "./layout/Sidebar";
 import { generateCode } from "@/lib/utils/2fa";
 import Header from "./dashboard/Header";
 import CodeGroupGrid from "./dashboard/CodeGroupGrid";
+import FloatingActionBar from "./ui/floating-action-bar";
+import AddGroupModal from "./dashboard/AddGroupModal";
 import AddCodeModal from "./dashboard/AddCodeModal";
 import ShareModal from "./dashboard/ShareModal";
+import AddModelModal from "./models/AddModelModal";
 import StatsCard from "./dashboard/StatsCard";
 import { Button } from "@/components/ui/button";
 import { Plus, Users, FolderClosed, KeyRound, Share2, PuzzleIcon } from "lucide-react";
@@ -29,6 +32,8 @@ const Home = ({ initialRole = "User" }: HomeProps) => {
     (localStorage.getItem("userRole") as Role) || initialRole,
   );
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isAddGroupModalOpen, setIsAddGroupModalOpen] = useState(false);
+  const [isAddModelModalOpen, setIsAddModelModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<{
     id: string;
@@ -266,10 +271,53 @@ const Home = ({ initialRole = "User" }: HomeProps) => {
           </div>
         </div>
 
+        <FloatingActionBar>
+          {getPermissions(currentRole).canCreateGroups && (
+            <Button
+              variant="default"
+              size="sm"
+              className="flex-1"
+              onClick={() => setIsAddGroupModalOpen(true)}
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              Add Group
+            </Button>
+          )}
+          {getPermissions(currentRole).canCreateGroups && (
+            <Button
+              variant="default"
+              size="sm"
+              className="flex-1"
+              onClick={() => setIsAddModelModalOpen(true)}
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              Add Model
+            </Button>
+          )}
+        </FloatingActionBar>
+
         <AddCodeModal
           open={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}
           onSubmit={handleAddCode}
+        />
+
+        <AddGroupModal
+          open={isAddGroupModalOpen}
+          onClose={() => setIsAddGroupModalOpen(false)}
+          onSubmit={() => {}}
+        />
+
+        <AddModelModal
+          open={isAddModelModalOpen}
+          onClose={() => setIsAddModelModalOpen(false)}
+          onSubmit={async (values) => {
+            try {
+              await navigate('/models');
+            } catch (err) {
+              console.error("Error navigating to models:", err);
+            }
+          }}
         />
 
         <ShareModal

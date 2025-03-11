@@ -13,6 +13,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import Header from "../dashboard/Header";
 import Sidebar from "../layout/Sidebar";
+import FloatingActionBar from "@/components/ui/floating-action-bar";
 import { type Role, getPermissions } from "@/lib/utils/roles";
 import { Model, User } from "@/lib/db/types";
 import { supabase } from "@/lib/supabase";
@@ -252,21 +253,7 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => 
 
       <main className="flex-1 md:ml-64 ml-0 pt-16 px-2 sm:px-4 container mx-auto max-w-7xl bg-background min-h-screen">
         <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl sm:text-2xl font-semibold">Team Members</h2>
-            {(role === "Admin" ||
-              (role === "Manager" &&
-                getPermissions(role).canManageUsers)) && (
-              <Button
-                onClick={() => setIsAddModalOpen(true)}
-                className="flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">Add Team Member</span>
-                <span className="sm:hidden">Add</span>
-              </Button>
-            )}
-          </div>
+          <h2 className="text-xl sm:text-2xl font-semibold">Team Members</h2>
 
           {/* Mobile View */}
           <div className="block lg:hidden space-y-4">
@@ -447,6 +434,21 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => 
             </div>
           )}
         </div>
+
+        {(role === "Admin" ||
+          (role === "Manager" && getPermissions(role).canManageUsers)) && (
+          <FloatingActionBar>
+            <Button
+              variant="default"
+              size="sm"
+              className="flex-1"
+              onClick={() => setIsAddModalOpen(true)}
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              Add Member
+            </Button>
+          </FloatingActionBar>
+        )}
 
         <AddTeamMemberModal
           open={isAddModalOpen}

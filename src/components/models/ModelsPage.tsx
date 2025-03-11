@@ -12,6 +12,7 @@ import { Plus, Pencil, Trash2, Share2 } from "lucide-react";
 import Header from "../dashboard/Header";
 import TOTPDisplay from "./TOTPDisplay";
 import Sidebar from "../layout/Sidebar";
+import FloatingActionBar from "@/components/ui/floating-action-bar";
 import { type Role } from "@/lib/utils/roles";
 import { Model } from "@/lib/db/types";
 import { supabase, supabaseAdmin } from "@/lib/supabase";
@@ -265,17 +266,7 @@ const ModelsPage = () => {
 
       <main className="flex-1 md:ml-64 ml-0 pt-16 px-2 sm:px-4 container mx-auto max-w-7xl bg-background min-h-screen">
         <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-semibold">Models</h2>
-            <Button
-              onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Add Model</span>
-              <span className="sm:hidden">Add</span>
-            </Button>
-          </div>
+          <h2 className="text-2xl font-semibold mb-6">Models</h2>
 
           {/* Mobile View */}
           <div className="block lg:hidden space-y-4">
@@ -469,6 +460,18 @@ const ModelsPage = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <FloatingActionBar>
+          <Button
+            variant="default"
+            size="sm"
+            className="flex-1"
+            onClick={() => setIsAddModalOpen(true)}
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            Add Model
+          </Button>
+        </FloatingActionBar>
 
         <ShareModelModal 
           open={!!sharingModel}

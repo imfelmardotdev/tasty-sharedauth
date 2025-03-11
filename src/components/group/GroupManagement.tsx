@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Users, Copy, Share2, Trash2, QrCode, Plus } from "lucide-react";
 import Header from "../dashboard/Header";
 import Sidebar from "../layout/Sidebar";
+import FloatingActionBar from "@/components/ui/floating-action-bar";
 import { type Role } from "@/lib/utils/roles";
 import ShareModal from "../dashboard/ShareModal";
 import AddCodeModal from "../dashboard/AddCodeModal";
@@ -243,9 +244,9 @@ const GroupManagement = () => {
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-semibold">Group Details</h3>
             <Button
+              variant="default"
               onClick={() => setIsAddCodeModalOpen(true)}
-              className="flex items-center gap-2"
-              size="sm"
+              className="flex items-center gap-2 md:flex hidden"
             >
               <Plus className="w-4 h-4" />
               Add Code
@@ -517,6 +518,18 @@ const GroupManagement = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <FloatingActionBar className="md:hidden">
+          <Button
+            variant="default"
+            size="sm"
+            className="flex-1"
+            onClick={() => setIsAddCodeModalOpen(true)}
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            Add Code
+          </Button>
+        </FloatingActionBar>
       </main>
     </div>
   );

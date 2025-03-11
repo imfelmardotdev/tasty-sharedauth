@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { FolderPlus, Users, Trash2 } from "lucide-react";
 import Header from "../dashboard/Header";
 import Sidebar from "../layout/Sidebar";
+import FloatingActionBar from "../ui/floating-action-bar";
 import AddGroupModal from "../dashboard/AddGroupModal";
 import ShareModal from "../dashboard/ShareModal";
 import { useDatabase } from "@/contexts/DatabaseContext";
@@ -121,16 +122,7 @@ const GroupsPage = () => {
 
       <main className="flex-1 ml-0 md:ml-64 pt-16 px-4 container mx-auto max-w-7xl">
         <div className="p-6 space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-semibold">Groups</h2>
-            <Button
-              onClick={() => setIsAddGroupModalOpen(true)}
-              className="flex items-center gap-2"
-            >
-              <FolderPlus className="w-4 h-4" />
-              New Group
-            </Button>
-          </div>
+          <h2 className="text-2xl font-semibold mb-6">Groups</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {groups.map((group) => (
@@ -242,6 +234,18 @@ const GroupsPage = () => {
           groupId={selectedGroup?.id}
           groupName={selectedGroup?.title}
         />
+
+        <FloatingActionBar>
+          <Button
+            variant="default"
+            size="sm"
+            className="flex-1"
+            onClick={() => setIsAddGroupModalOpen(true)}
+          >
+            <FolderPlus className="w-4 h-4 mr-1" />
+            New Group
+          </Button>
+        </FloatingActionBar>
 
         <AlertDialog 
           open={isDeleteDialogOpen} 
