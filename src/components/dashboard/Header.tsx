@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Key, Menu } from "lucide-react";
+import LogoutButton from "@/components/LogoutButton";
 import { type Role } from "@/lib/utils/roles";
 import { useNavigate } from "react-router-dom";
 
@@ -59,6 +60,9 @@ const Header = ({ currentRole = "User", toggleMobileSidebar }: HeaderProps) => {
           <span className="hidden sm:inline">{currentRole}</span>
           <span className="sm:hidden">{currentRole.charAt(0)}</span>
         </Button>
+        {isMobile && (
+          <LogoutButton />
+        )}
       </div>
     </header>
   );
