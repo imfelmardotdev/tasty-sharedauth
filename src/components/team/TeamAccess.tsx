@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -8,6 +8,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import { Plus, Pencil, Trash2 } from "lucide-react";
@@ -40,6 +54,7 @@ import {
 const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => {
   const { toast } = useToast();
   const [members, setMembers] = useState<User[]>([]);
+  const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
   const [totalMembers, setTotalMembers] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -50,6 +65,17 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => 
   
   // Ensure we have a valid role, defaulting to User if null/undefined
   const role = currentRole || "User";
+
+  const availableGroups = useMemo(() => 
+    Array.from(new Set(members.flatMap(m => m.groupNames || []))).sort()
+  , [members]);
+
+  const filteredMembers = useMemo(() => {
+    if (selectedGroups.length === 0) return members;
+    return members.filter(member => 
+      member.groupNames?.some(group => selectedGroups.includes(group))
+    );
+  }, [members, selectedGroups]);
 
   const toggleMobileSidebar = useCallback(() => {
     setIsMobileSidebarOpen(prev => !prev);
@@ -253,16 +279,77 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => 
 
       <main className="flex-1 md:ml-64 ml-0 pt-16 px-2 sm:px-4 container mx-auto max-w-7xl bg-background min-h-screen">
         <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
-          <h2 className="text-xl sm:text-2xl font-semibold">Team Members</h2>
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
+            <div className="flex justify-between items-center w-full">
+              <h2 className="text-xl sm:text-2xl font-semibold">Team Members</h2>
+              <Button
+                variant="default"
+                onClick={() => setIsAddModalOpen(true)}
+                className="hidden md:flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Add Member
+              </Button>
+            </div>
+            <div className="w-full sm:w-[300px]">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className={cn(
+                      "justify-between",
+                      selectedGroups.length > 0 && "text-primary"
+                    )}
+                  >
+                    {selectedGroups.length > 0
+                      ? `${selectedGroups.length} group${selectedGroups.length === 1 ? '' : 's'} selected`
+                      : "Filter by groups"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[200px] p-0">
+                  <Command>
+                    <CommandInput placeholder="Search groups..." />
+                    <CommandEmpty>No groups found.</CommandEmpty>
+                    <CommandGroup>
+                      {availableGroups.map((group) => (
+                        <CommandItem
+                          key={group}
+                          onSelect={() => {
+                            setSelectedGroups(current =>
+                              current.includes(group)
+                                ? current.filter(g => g !== group)
+                                : [...current, group]
+                            )
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedGroups.includes(group)
+                                ? "opacity-100"
+                                : "opacity-0"
+                            )}
+                          />
+                          {group}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
 
           {/* Mobile View */}
           <div className="block lg:hidden space-y-4">
-            {members.length === 0 ? (
+            {members.length === 0 || filteredMembers.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 No team members found
               </div>
             ) : (
-              members.map((member: User) => (
+              filteredMembers.map((member: User) => (
                 <div key={member.id} className="border rounded-lg p-4 space-y-4 bg-card">
                   <div className="flex items-start justify-between">
                     <div>
@@ -340,14 +427,14 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => 
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {members.length === 0 ? (
+                {members.length === 0 || filteredMembers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-4">
                       No team members found
                     </TableCell>
                   </TableRow>
                 ) : (
-                  members.map((member: User) => (
+                  filteredMembers.map((member: User) => (
                     <TableRow key={member.id}>
                       <TableCell>{member.name}</TableCell>
                       <TableCell>{member.email}</TableCell>
@@ -437,7 +524,7 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => 
 
         {(role === "Admin" ||
           (role === "Manager" && getPermissions(role).canManageUsers)) && (
-          <FloatingActionBar>
+          <FloatingActionBar className="md:hidden">
             <Button
               variant="default"
               size="sm"

@@ -266,7 +266,17 @@ const ModelsPage = () => {
 
       <main className="flex-1 md:ml-64 ml-0 pt-16 px-2 sm:px-4 container mx-auto max-w-7xl bg-background min-h-screen">
         <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
-          <h2 className="text-2xl font-semibold mb-6">Models</h2>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-semibold">Models</h2>
+            <Button
+              variant="default"
+              onClick={() => setIsAddModalOpen(true)}
+              className="hidden md:flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Add Model
+            </Button>
+          </div>
 
           {/* Mobile View */}
           <div className="block lg:hidden space-y-4">
@@ -461,7 +471,7 @@ const ModelsPage = () => {
           </AlertDialogContent>
         </AlertDialog>
 
-        <FloatingActionBar>
+        <FloatingActionBar className="md:hidden">
           <Button
             variant="default"
             size="sm"

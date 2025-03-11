@@ -262,7 +262,8 @@ const SharedLinksPage = () => {
       <main className="flex-1 md:ml-64 ml-0 pt-16 px-2 sm:px-4 container mx-auto max-w-7xl">
         <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex justify-between items-center w-full md:w-auto">
               <h2 className="text-xl sm:text-2xl font-semibold">Shared Links</h2>
               {selected.links.size > 0 && (
                 <Button
@@ -280,6 +281,39 @@ const SharedLinksPage = () => {
                 </Button>
               )}
             </div>
+
+            {/* Desktop Controls */}
+            <div className="hidden md:flex items-center gap-3 flex-1 max-w-2xl">
+              <Button
+                variant={filterType === "group" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setFilterType(filterType === "group" ? "all" : "group")}
+                className="whitespace-nowrap"
+              >
+                <FolderClosed className="w-4 h-4 mr-1" />
+                Groups
+              </Button>
+              <Button
+                variant={filterType === "model" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setFilterType(filterType === "model" ? "all" : "model")}
+                className="whitespace-nowrap"
+              >
+                <Database className="w-4 h-4 mr-1" />
+                Models
+              </Button>
+              <div className="relative flex-1">
+                <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search links..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full h-9 pl-8 pr-3 rounded-md border bg-background text-sm"
+                />
+              </div>
+            </div>
+          </div>
 
             {/* Table content using filteredLinks */}
             <div className="border rounded-lg bg-card">
@@ -330,7 +364,7 @@ const SharedLinksPage = () => {
           </div>
         </div>
 
-        <FloatingActionBar>
+        <FloatingActionBar className="md:hidden">
           <div className="flex items-center gap-2 w-full">
             <Button
               variant={filterType === "group" ? "default" : "ghost"}

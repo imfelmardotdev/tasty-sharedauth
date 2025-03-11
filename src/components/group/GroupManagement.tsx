@@ -246,7 +246,7 @@ const GroupManagement = () => {
             <Button
               variant="default"
               onClick={() => setIsAddCodeModalOpen(true)}
-              className="flex items-center gap-2 md:flex hidden"
+              className="hidden md:flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
               Add Code

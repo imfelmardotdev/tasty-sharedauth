@@ -256,7 +256,7 @@ const Home = ({ initialRole = "User" }: HomeProps) => {
               title="Extensions"
               value={models.length}
               icon={PuzzleIcon}
-              description="Active extensions"
+              description="Extensions are models or accounts that automate 2FA input in Chrome and other browsers."
               onClick={() => navigate('/models')}
             />
             {currentRole === "Admin" && (
@@ -271,7 +271,7 @@ const Home = ({ initialRole = "User" }: HomeProps) => {
           </div>
         </div>
 
-        <FloatingActionBar>
+        <FloatingActionBar className="md:hidden">
           {getPermissions(currentRole).canCreateGroups && (
             <Button
               variant="default"

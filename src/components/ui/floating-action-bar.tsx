@@ -10,13 +10,12 @@ const FloatingActionBar = ({ children, className }: FloatingActionBarProps) => {
   return (
     <div
       className={cn(
-        "fixed bottom-0 left-0 right-0 z-40",
-        "md:hidden", // Only show on mobile
+        "fixed bottom-0 left-0 right-0 md:left-64 z-40",
         "bg-background/80 backdrop-blur-lg",
         "border-t border-border",
         "py-3 px-4",
         "transition-transform duration-200 ease-in-out",
-        "mb-16", // Space for mobile navigation bar
+        "mb-16 md:mb-4", // Space for navigation bar, less on desktop
         className
       )}
     >

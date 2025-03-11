@@ -122,7 +122,17 @@ const GroupsPage = () => {
 
       <main className="flex-1 ml-0 md:ml-64 pt-16 px-4 container mx-auto max-w-7xl">
         <div className="p-6 space-y-6">
-          <h2 className="text-2xl font-semibold mb-6">Groups</h2>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-semibold">Groups</h2>
+            <Button
+              variant="default"
+              onClick={() => setIsAddGroupModalOpen(true)}
+              className="hidden md:flex items-center gap-2"
+            >
+              <FolderPlus className="w-4 h-4" />
+              New Group
+            </Button>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {groups.map((group) => (
@@ -235,7 +245,7 @@ const GroupsPage = () => {
           groupName={selectedGroup?.title}
         />
 
-        <FloatingActionBar>
+        <FloatingActionBar className="md:hidden">
           <Button
             variant="default"
             size="sm"

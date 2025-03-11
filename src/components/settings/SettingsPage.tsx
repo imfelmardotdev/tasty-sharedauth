@@ -156,6 +156,9 @@ const SettingsPage = () => {
               </CardContent>
             </Card>
           </div>
+          <div className="text-center text-sm text-muted-foreground mt-8 pb-4">
+            Developed by felmardotdev
+          </div>
         </div>
       </main>
     </div>
