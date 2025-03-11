@@ -269,7 +269,7 @@ const GroupManagement = () => {
                 <div className="space-y-4">
                   <div>
                     <h4 className="text-sm font-medium text-muted-foreground">Created By</h4>
-                    <p className="text-base">{group.created_by}</p>
+                    <p className="text-base">{group.creator_email || group.created_by}</p>
                   </div>
                   <div>
                     <h4 className="text-sm font-medium text-muted-foreground">Created At</h4>
@@ -520,6 +520,15 @@ const GroupManagement = () => {
         </AlertDialog>
 
         <FloatingActionBar className="md:hidden">
+          <Button
+            variant="default"
+            size="sm"
+            className="flex-1"
+            onClick={() => navigate("/groups")}
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" />
+            Back
+          </Button>
           <Button
             variant="default"
             size="sm"

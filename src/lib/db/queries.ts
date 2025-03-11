@@ -140,7 +140,7 @@ export const getGroups = async () => {
     if (groupsError) throw groupsError;
     
     if (groups) {
-      // Get member counts and codes for each group
+      // Get creator emails, member counts and codes for each group
       const groupsData = await Promise.all(
         groups.map(async (group) => {
           // Get member count
@@ -155,8 +155,16 @@ export const getGroups = async () => {
             .select("*")
             .eq("group_id", group.id);
 
+              // Get creator's email
+          const { data: creator } = await supabase
+            .from("users")
+            .select("email")
+            .eq("id", group.created_by)
+            .single();
+            
           return {
             ...group,
+            creator_email: creator?.email,
             member_count: [{ count: count || 0 }],
             group_codes: groupCodes || []
           };
@@ -187,7 +195,7 @@ export const getGroups = async () => {
     if (groupsError) throw groupsError;
 
     if (groups) {
-      // Get member counts and codes for each group
+      // Get creator emails, member counts and codes for each group
       const groupsData = await Promise.all(
         groups.map(async (group) => {
           // Get member count
@@ -202,8 +210,16 @@ export const getGroups = async () => {
             .select("*")
             .eq("group_id", group.id);
 
+          // Get creator's email
+          const { data: creator } = await supabase
+            .from("users")
+            .select("email")
+            .eq("id", group.created_by)
+            .single();
+
           return {
             ...group,
+            creator_email: creator?.email,
             member_count: [{ count: count || 0 }],
             group_codes: groupCodes || []
           };

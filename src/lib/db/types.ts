@@ -16,6 +16,7 @@ export interface Group {
   description?: string;
   created_at: string;
   created_by: string;
+  creator_email?: string;
   codes?: Code[];
   group_codes?: GroupCode[];
   member_count?: [{ count: number }];
