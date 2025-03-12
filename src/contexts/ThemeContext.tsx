@@ -34,7 +34,7 @@ const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
   const [font, setFontState] = useState<ThemeFont>(() => {
     const savedFont = localStorage.getItem("themeFont") as ThemeFont;
-    return savedFont || "orbitron";
+    return savedFont || "helvetica";
   });
 
   useEffect(() => {
