@@ -143,9 +143,9 @@ const SettingsPage = () => {
                         <span className={`text-sm ${fontOption.className}`}>
                           {fontOption.label}
                         </span>
-                        {(fontOption.value === "orbitron" || font === fontOption.value) && (
+                        {(fontOption.value === "helvetica" || font === fontOption.value) && (
                           <span className="text-xs text-muted-foreground">
-                            {fontOption.value === "orbitron" && "Default"}
+                            {fontOption.value === "helvetica" && "Default"}
                             {font === fontOption.value && "Current"}
                           </span>
                         )}
