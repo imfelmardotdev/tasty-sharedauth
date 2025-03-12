@@ -10,6 +10,7 @@ interface Code {
   id: string;
   group_id: string;
   code: string;
+  name: string;
   created_at: string;
   expires_at: string;
   secret?: string;
@@ -327,6 +328,7 @@ const SharedGroupView = () => {
             id,
             group_id,
             code,
+            name,
             created_at,
             expires_at,
             secret
@@ -427,12 +429,15 @@ const SharedGroupView = () => {
               </div>
             )}
             {latestCode?.secret && latestCode?.id && (
-              <div className="w-full">
-                <GroupTOTPDisplay 
-                  secret={latestCode.secret}
-                  codeId={latestCode.id}
-                />
-              </div>
+              <>
+                <p className="text-sm text-muted-foreground">{latestCode.name || ' '}</p>
+                <div className="w-full">
+                  <GroupTOTPDisplay 
+                    secret={latestCode.secret}
+                    codeId={latestCode.id}
+                  />
+                </div>
+              </>
             )}
             <div className="flex items-center gap-2">
               <span className={`w-2 h-2 rounded-full ${

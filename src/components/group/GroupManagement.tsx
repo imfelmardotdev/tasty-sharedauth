@@ -11,6 +11,7 @@ import FloatingActionBar from "@/components/ui/floating-action-bar";
 import { type Role } from "@/lib/utils/roles";
 import ShareModal from "../dashboard/ShareModal";
 import AddCodeModal from "../dashboard/AddCodeModal";
+import MembersModal from "./MembersModal";
 import Timer from "../group/Timer";
 import GroupTOTPDisplay from "../group/GroupTOTPDisplay";
 import { useDatabase } from "@/contexts/DatabaseContext";
@@ -49,6 +50,7 @@ const GroupManagement = () => {
   } | null>(null);
   const [groupCodes, setGroupCodes] = useState<GroupCode[]>([]);
   const [isAddCodeModalOpen, setIsAddCodeModalOpen] = useState(false);
+  const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
 
   const toggleMobileSidebar = () => setIsMobileSidebarOpen(prev => !prev);
 
@@ -234,7 +236,11 @@ const GroupManagement = () => {
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-              <Badge variant="outline" className="flex items-center gap-1">
+              <Badge 
+                variant="outline" 
+                className="flex items-center gap-1 cursor-pointer hover:bg-accent/50 transition-colors"
+                onClick={() => setIsMembersModalOpen(true)}
+              >
                 <Users className="w-3 h-3" />
                 <span>{group.member_count?.[0]?.count ?? 0} members</span>
               </Badge>
@@ -387,7 +393,7 @@ const GroupManagement = () => {
                           onClick={() => {
                             setSharedDetails({
                               id: group.id,
-                              title: `${group.title} - Code: ${code.code}`,
+                              title: `${group.title} - ${code.name || 'Code'}`,
                             });
                             setIsShareModalOpen(true);
                           }}
@@ -539,6 +545,13 @@ const GroupManagement = () => {
             Add Code
           </Button>
         </FloatingActionBar>
+
+        <MembersModal
+          open={isMembersModalOpen}
+          onOpenChange={setIsMembersModalOpen}
+          groupId={group.id}
+          groupName={group.title}
+        />
       </main>
     </div>
   );

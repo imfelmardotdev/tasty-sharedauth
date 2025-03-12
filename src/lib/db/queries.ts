@@ -518,49 +518,70 @@ export const deleteGroup = async (id: string) => {
 // User Group queries
 export const getGroupMembers = async (groupId: string) => {
   try {
-    const { data, error } = await supabase
+    // First get the user_groups entries
+    const { data: userGroups, error: userGroupsError } = await supabase
       .from("user_groups")
-      .select(
-        `
-        users:users!inner (
-          id,
-          name,
-          email,
-          role,
-          created_at
-        )
-      `,
-      )
-      .eq("group_id", groupId)
-      .returns<{ users: User }[]>();
+      .select("user_id")
+      .eq("group_id", groupId);
 
-    if (error) {
-      if (error.message.includes('permission denied') && supabaseAdmin) {
-        const { data: adminData, error: adminError } = await supabaseAdmin
+    if (userGroupsError) {
+      if (userGroupsError.message.includes('permission denied') && supabaseAdmin) {
+        const { data: adminUserGroups, error: adminError } = await supabaseAdmin
           .from("user_groups")
-          .select(
-            `
-            users:users!inner (
-              id,
-              name,
-              email,
-              role,
-              created_at
-            )
-          `,
-          )
-          .eq("group_id", groupId)
-          .returns<{ users: User }[]>();
+          .select("user_id")
+          .eq("group_id", groupId);
 
         if (adminError) {
           console.error("Admin fetch failed:", adminError);
           throw adminError;
         }
-        return adminData.map((d) => d.users);
+        
+        if (!adminUserGroups?.length) return [];
+        
+        // Get user details for each user_id
+        const userIds = adminUserGroups.map(ug => ug.user_id);
+        const { data: users, error: usersError } = await supabaseAdmin
+          .from("users")
+          .select("id, name, email, role, created_at")
+          .in("id", userIds);
+
+        if (usersError) {
+          console.error("Admin users fetch failed:", usersError);
+          throw usersError;
+        }
+
+        return users || [];
       }
-      throw error;
+      throw userGroupsError;
     }
-    return data.map((d) => d.users);
+
+    if (!userGroups?.length) return [];
+
+    // Get user details for each user_id
+    const userIds = userGroups.map(ug => ug.user_id);
+    const { data: users, error: usersError } = await supabase
+      .from("users")
+      .select("id, name, email, role, created_at")
+      .in("id", userIds);
+
+    if (usersError) {
+      if (usersError.message.includes('permission denied') && supabaseAdmin) {
+        const { data: adminUsers, error: adminUsersError } = await supabaseAdmin
+          .from("users")
+          .select("id, name, email, role, created_at")
+          .in("id", userIds);
+
+        if (adminUsersError) {
+          console.error("Admin users fetch failed:", adminUsersError);
+          throw adminUsersError;
+        }
+
+        return adminUsers || [];
+      }
+      throw usersError;
+    }
+
+    return users || [];
   } catch (error) {
     console.error("Error fetching group members:", error);
     throw error;
