@@ -124,9 +124,9 @@ const AddModelModal = ({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px] bg-background border-border">
         <DialogHeader>
-          <DialogTitle>Add New Model</DialogTitle>
+          <DialogTitle>Add New Code</DialogTitle>
           <DialogDescription>
-            Add a new model with its authentication details.
+            Add a new code with its authentication details.
           </DialogDescription>
         </DialogHeader>
 
@@ -200,7 +200,7 @@ const AddModelModal = ({
                   <FormItem>
                     <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter model name" {...field} />
+                      <Input placeholder="Enter code name" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -258,7 +258,7 @@ const AddModelModal = ({
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit">Add Model</Button>
+              <Button type="submit">Add Code</Button>
             </DialogFooter>
           </form>
         </Form>

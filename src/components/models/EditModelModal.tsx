@@ -133,8 +133,8 @@ const EditModelModal = ({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px] bg-background border-border">
         <DialogHeader>
-          <DialogTitle>Edit Model</DialogTitle>
-          <DialogDescription>Update the model's details.</DialogDescription>
+          <DialogTitle>Edit Code</DialogTitle>
+          <DialogDescription>Update the code's details.</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -207,7 +207,7 @@ const EditModelModal = ({
                   <FormItem>
                     <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter model name" {...field} />
+                      <Input placeholder="Enter code name" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

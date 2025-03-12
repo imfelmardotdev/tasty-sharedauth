@@ -275,20 +275,20 @@ const ModelsPage = () => {
         <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
             <div className="flex justify-between items-center w-full">
-              <h2 className="text-2xl font-semibold">Models</h2>
+              <h2 className="text-2xl font-semibold">Codes</h2>
               <Button
                 variant="default"
                 onClick={() => setIsAddModalOpen(true)}
                 className="hidden md:flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" />
-                Add Model
+                Add Code
               </Button>
             </div>
             <div className="w-full sm:w-[300px]">
               <div className="relative">
                 <Input
-                  placeholder="Search models..."
+                  placeholder="Search codes..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -309,47 +309,47 @@ const ModelsPage = () => {
           {/* Mobile View */}
           <div className="block lg:hidden space-y-4">
             {filteredModels.map((model) => (
-              <div key={model.id} className="border rounded-lg p-4 space-y-4 bg-card">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-medium text-lg">{model.name}</h3>
+              <div key={model.id} className="border rounded-lg p-3 sm:p-4 space-y-3 sm:space-y-4 bg-card">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <h3 className="font-medium text-base sm:text-lg">{model.name}</h3>
                     <p className="text-sm text-muted-foreground">{model.username}</p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="hover:bg-slate-100"
                       onClick={() => setSharingModel(model)}
+                      className="h-8 w-8"
                     >
                       <Share2 className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="hover:bg-slate-100"
                       onClick={() => setEditingModel(model)}
+                      className="h-8 w-8"
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="hover:bg-red-100 text-red-500 hover:text-red-600"
                       onClick={() => setDeleteModelId(model.id)}
+                      className="h-8 w-8"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                   <div>
-                    <span className="text-muted-foreground block">Code</span>
-                    <span className="font-medium">{model.code}</span>
+                    <span className="text-muted-foreground block mb-1">Code</span>
+                    <span className="font-medium break-all">{model.code}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground block">2FA Code</span>
+                    <span className="text-muted-foreground block mb-1">2FA Code</span>
                     <div className="font-medium">
                       {model.totp_secret ? (
                         <TOTPDisplay 
@@ -362,8 +362,8 @@ const ModelsPage = () => {
                     </div>
                   </div>
                   {model.link && (
-                    <div className="col-span-2">
-                      <span className="text-muted-foreground block">Link</span>
+                    <div className="col-span-1 sm:col-span-2">
+                      <span className="text-muted-foreground block mb-1">Link</span>
                       <a
                         href={model.link}
                         target="_blank"
@@ -379,7 +379,7 @@ const ModelsPage = () => {
             ))}
             {!loading && models.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
-                No models found
+                No codes found
               </div>
             )}
           </div>
@@ -507,7 +507,7 @@ const ModelsPage = () => {
             onClick={() => setIsAddModalOpen(true)}
           >
             <Plus className="w-4 h-4 mr-1" />
-            Add Model
+            Add Code
           </Button>
         </FloatingActionBar>
 

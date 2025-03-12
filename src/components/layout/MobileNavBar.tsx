@@ -54,7 +54,7 @@ const MobileNavBar = ({ currentRole }: MobileNavBarProps) => {
     },
     {
       icon: Database,
-      label: "Extension",
+      label: "Codes",
       allowed: ["Admin", "Manager"],
       path: "/models",
     },

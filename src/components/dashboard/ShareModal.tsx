@@ -175,6 +175,23 @@ const ShareModal = ({
     }
   }, [open]);
 
+  // Add touch event handlers to prevent zooming
+  React.useEffect(() => {
+    const handleTouchStart = (e: TouchEvent) => {
+      if (open && e.touches.length > 1) {
+        e.preventDefault();
+      }
+    };
+
+    if (open) {
+      document.addEventListener('touchstart', handleTouchStart, { passive: false });
+    }
+
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+    };
+  }, [open]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px] bg-background">

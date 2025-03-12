@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import { generateTOTP, getTimeRemaining } from "@/lib/utils/totp";
 import { Progress } from "@/components/ui/progress";
 import { updateModelCode } from "@/lib/db/queries";
+import { Copy } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { Button } from "@/components/ui/button";
 
 interface TOTPDisplayProps {
   secret: string | null;
@@ -9,6 +12,7 @@ interface TOTPDisplayProps {
 }
 
 const TOTPDisplay = ({ secret, modelId }: TOTPDisplayProps) => {
+  const { toast } = useToast();
   const [code, setCode] = useState<string>("");
   const [updateError, setUpdateError] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(30);
@@ -78,17 +82,44 @@ const TOTPDisplay = ({ secret, modelId }: TOTPDisplayProps) => {
     };
   }, [secret, modelId]);
 
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      toast({
+        title: "Code copied!",
+        description: "The 2FA code has been copied to your clipboard.",
+      });
+    } catch (err) {
+      console.error("Error copying to clipboard:", err);
+      toast({
+        title: "Error",
+        description: "Failed to copy code to clipboard",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (!secret) {
     return null;
   }
 
   return (
-    <div className="space-y-2">
-      <div className={`font-mono text-4xl tracking-[0.5em] text-primary font-semibold ${updateError ? 'text-yellow-500' : ''}`}>
-        {code}
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2">
+        <div className={`font-mono text-xl sm:text-4xl tracking-[0.25em] sm:tracking-[0.5em] text-primary font-semibold break-all sm:break-normal ${updateError ? 'text-yellow-500' : ''}`}>
+          {code}
+        </div>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={handleCopy}
+          className="shrink-0 h-8 w-8"
+        >
+          <Copy className="h-4 w-4" />
+        </Button>
       </div>
       <Progress value={(timeRemaining / 30) * 100} className="h-1.5 bg-gray-100" />
-      <div className="text-sm text-muted-foreground text-center">
+      <div className="text-xs sm:text-sm text-muted-foreground text-center">
         Refreshes in {timeRemaining}s
       </div>
     </div>

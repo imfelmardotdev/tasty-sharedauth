@@ -83,12 +83,12 @@ const GroupTOTPDisplay = ({ secret, codeId }: GroupTOTPDisplayProps) => {
   }
 
   return (
-    <div className="space-y-2" data-code-id={codeId}>
-      <div className={`font-mono text-2xl sm:text-4xl tracking-[0.25em] sm:tracking-[0.5em] text-primary font-bold break-all sm:break-normal ${updateError ? 'text-yellow-500' : ''}`}>
+    <div className="space-y-1.5" data-code-id={codeId}>
+      <div className={`font-mono text-xl sm:text-4xl tracking-[0.25em] sm:tracking-[0.5em] text-primary font-bold break-all sm:break-normal ${updateError ? 'text-yellow-500' : ''}`}>
         {code}
       </div>
-      <Progress value={(timeRemaining / 30) * 100} className="h-1" />
-      <div className="text-xs text-gray-500">
+      <Progress value={(timeRemaining / 30) * 100} className="h-1.5 bg-gray-100" />
+      <div className="text-xs sm:text-sm text-muted-foreground text-center">
         Refreshes in {timeRemaining}s
       </div>
     </div>
