@@ -72,7 +72,7 @@ const Sidebar = ({
     },
     {
       icon: Database,
-      label: "Extension",
+      label: "Codes",
       allowed: ["Admin", "Manager"],
       path: "/models",
     },

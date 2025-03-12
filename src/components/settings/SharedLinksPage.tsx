@@ -31,7 +31,8 @@ interface SharedLinkBase {
   created_at: string;
   access_token: string;
   views_count: number;
-  access_type: 'anyone' | 'specific';
+  access_type: 'anyone' | 'restricted';
+  one_time_view: boolean;
 }
 
 interface SharedGroupLink extends SharedLinkBase {
@@ -88,6 +89,7 @@ const SharedLinksPage = () => {
           access_token,
           views_count,
           access_type,
+          one_time_view,
           group_id
         `)
         .order("created_at", { ascending: false });
@@ -103,6 +105,7 @@ const SharedLinksPage = () => {
           access_token,
           views_count,
           access_type,
+          one_time_view,
           model_id
         `)
         .order("created_at", { ascending: false });
@@ -399,11 +402,11 @@ const SharedLinksPage = () => {
                         }}
                       />
                     </TableHead>
-                    <TableHead>Type</TableHead>
+                    <TableHead className="hidden md:table-cell">Type</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Access</TableHead>
-                    <TableHead>Views</TableHead>
-                    <TableHead>Created At</TableHead>
+                    <TableHead className="hidden md:table-cell">Views</TableHead>
+                    <TableHead className="hidden md:table-cell">Created At</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -416,23 +419,37 @@ const SharedLinksPage = () => {
                           onCheckedChange={() => toggleSelection(link)}
                         />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         <Badge variant={link.type === 'group' ? 'default' : 'secondary'}>
                           {link.type === 'group' ? 'Group' : 'Model'}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {link.type === 'group' ? link.group.title : link.model.name}
+                        <div className="flex flex-col gap-1">
+                          <span>{link.type === 'group' ? link.group.title : link.model.name}</span>
+                          <Badge className="w-fit md:hidden" variant={link.type === 'group' ? 'default' : 'secondary'}>
+                            {link.type === 'group' ? 'Group' : 'Model'}
+                          </Badge>
+                        </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={link.access_type === 'anyone' ? 'outline' : 'secondary'}>
-                          {link.access_type === 'anyone' ? 'Anyone' : 'Specific Users'}
-                        </Badge>
+                        <div className="flex flex-wrap gap-2">
+                          <Badge variant={link.access_type === 'anyone' ? 'outline' : 'secondary'}>
+                            {link.access_type === 'anyone' ? 'Anyone' : 'Restricted'}
+                          </Badge>
+                          {link.one_time_view && (
+                            <Badge variant="outline" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100/80">
+                              Single-use
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         {link.views_count || 0}
                       </TableCell>
-                      <TableCell>{new Date(link.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {new Date(link.created_at).toLocaleDateString()}
+                      </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
                           <Button
