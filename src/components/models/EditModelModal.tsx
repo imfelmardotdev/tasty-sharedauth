@@ -90,8 +90,22 @@ const EditModelModal = ({
           const url = result.data;
           const params = new URLSearchParams(new URL(url).search);
           const secret = params.get("secret");
+          const issuer = params.get("issuer");
+          const account = params.get("account");
           if (secret) {
             handleSecretInput(secret);
+            // Set a descriptive name based on issuer and account if available
+            const name = issuer && account ? `${issuer} (${account})` : issuer || account || "TOTP Code";
+            form.setValue("name", name);
+            // Set username if account is available
+            if (account) {
+              form.setValue("username", account);
+            }
+            toast({
+              title: "QR Code Scanned Successfully",
+              description: "The authentication code has been updated.",
+              variant: "default",
+            });
             stopScanner();
           }
         },

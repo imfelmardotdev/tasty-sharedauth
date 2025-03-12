@@ -79,9 +79,19 @@ const AddCodeModal = ({
           const url = result.data;
           const params = new URLSearchParams(new URL(url).search);
           const secret = params.get("secret");
+          const issuer = params.get("issuer");
+          const account = params.get("account");
           if (secret) {
             form.setValue("secret", secret);
             handleSecretInput(secret);
+            // Set a descriptive name based on issuer and account if available
+            const name = issuer && account ? `${issuer} (${account})` : issuer || account || "TOTP Code";
+            form.setValue("name", name);
+            toast({
+              title: "QR Code Scanned Successfully",
+              description: "The authentication code has been added.",
+              variant: "default",
+            });
             stopScanner();
           }
         },
@@ -118,7 +128,7 @@ const AddCodeModal = ({
       const code = await generateTOTP(secret);
       form.setValue("code", code);
       form.setValue("secret", secret);
-      // Also set the name if it's empty
+      // Only set default name if no name is set and it's not from QR scan
       if (!form.getValues("name")) {
         form.setValue("name", "TOTP Code");
       }

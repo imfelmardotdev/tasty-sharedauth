@@ -80,8 +80,20 @@ const AddModelModal = ({
           const url = result.data;
           const params = new URLSearchParams(new URL(url).search);
           const secret = params.get("secret");
+          const issuer = params.get("issuer");
+          const account = params.get("account");
           if (secret) {
             handleSecretInput(secret);
+            const name = issuer && account ? `${issuer} (${account})` : issuer || account || "TOTP Code";
+            form.setValue("name", name);
+            if (account) {
+              form.setValue("username", account);
+            }
+            toast({
+              title: "QR Code Scanned Successfully",
+              description: "The authentication code has been added.",
+              variant: "default",
+            });
             stopScanner();
           }
         },
