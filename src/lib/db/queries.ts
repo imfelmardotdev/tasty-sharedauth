@@ -100,25 +100,65 @@ export const getUser = async (email: string) => {
     } as User;
   }
 
-  const { data, error } = await supabase
-    .from("users")
-    .select("*")
-    .eq("email", email)
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("email", email)
+      .single();
 
-  if (error) throw error;
-  return data as User;
+    if (error) {
+      if (error.message.includes('permission denied') && supabaseAdmin) {
+        const { data: adminData, error: adminError } = await supabaseAdmin
+          .from("users")
+          .select("*")
+          .eq("email", email)
+          .single();
+
+        if (adminError) {
+          console.error("Admin fetch failed:", adminError);
+          throw adminError;
+        }
+        return adminData as User;
+      }
+      throw error;
+    }
+    return data as User;
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    throw error;
+  }
 };
 
 export const createUser = async (user: Partial<User>) => {
-  const { data, error } = await supabase
-    .from("users")
-    .insert(user)
-    .select()
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .insert(user)
+      .select()
+      .single();
 
-  if (error) throw error;
-  return data as User;
+    if (error) {
+      if (error.message.includes('permission denied') && supabaseAdmin) {
+        const { data: adminData, error: adminError } = await supabaseAdmin
+          .from("users")
+          .insert(user)
+          .select()
+          .single();
+
+        if (adminError) {
+          console.error("Admin create failed:", adminError);
+          throw adminError;
+        }
+        return adminData as User;
+      }
+      throw error;
+    }
+    return data as User;
+  } catch (error) {
+    console.error("Error creating user:", error);
+    throw error;
+  }
 };
 
 // Group queries
@@ -156,11 +196,24 @@ export const getGroups = async () => {
             .eq("group_id", group.id);
 
               // Get creator's email
-          const { data: creator } = await supabase
+          let creator;
+          const { data: creatorData, error: creatorError } = await supabase
             .from("users")
             .select("email")
             .eq("id", group.created_by)
             .single();
+
+          creator = creatorData;
+          
+          // Try with admin client if permission denied
+          if (creatorError && creatorError.message.includes('permission denied') && supabaseAdmin) {
+            const { data: adminCreator } = await supabaseAdmin
+              .from("users")
+              .select("email")
+              .eq("id", group.created_by)
+              .single();
+            creator = adminCreator;
+          }
             
           return {
             ...group,
@@ -211,11 +264,24 @@ export const getGroups = async () => {
             .eq("group_id", group.id);
 
           // Get creator's email
-          const { data: creator } = await supabase
+          let creator;
+          const { data: creatorData, error: creatorError } = await supabase
             .from("users")
             .select("email")
             .eq("id", group.created_by)
             .single();
+
+          creator = creatorData;
+          
+          // Try with admin client if permission denied
+          if (creatorError && creatorError.message.includes('permission denied') && supabaseAdmin) {
+            const { data: adminCreator } = await supabaseAdmin
+              .from("users")
+              .select("email")
+              .eq("id", group.created_by)
+              .single();
+            creator = adminCreator;
+          }
 
           return {
             ...group,
@@ -451,24 +517,54 @@ export const deleteGroup = async (id: string) => {
 
 // User Group queries
 export const getGroupMembers = async (groupId: string) => {
-  const { data, error } = await supabase
-    .from("user_groups")
-    .select(
-      `
-      users:users!inner (
-        id,
-        name,
-        email,
-        role,
-        created_at
+  try {
+    const { data, error } = await supabase
+      .from("user_groups")
+      .select(
+        `
+        users:users!inner (
+          id,
+          name,
+          email,
+          role,
+          created_at
+        )
+      `,
       )
-    `,
-    )
-    .eq("group_id", groupId)
-    .returns<{ users: User }[]>();
+      .eq("group_id", groupId)
+      .returns<{ users: User }[]>();
 
-  if (error) throw error;
-  return data.map((d) => d.users);
+    if (error) {
+      if (error.message.includes('permission denied') && supabaseAdmin) {
+        const { data: adminData, error: adminError } = await supabaseAdmin
+          .from("user_groups")
+          .select(
+            `
+            users:users!inner (
+              id,
+              name,
+              email,
+              role,
+              created_at
+            )
+          `,
+          )
+          .eq("group_id", groupId)
+          .returns<{ users: User }[]>();
+
+        if (adminError) {
+          console.error("Admin fetch failed:", adminError);
+          throw adminError;
+        }
+        return adminData.map((d) => d.users);
+      }
+      throw error;
+    }
+    return data.map((d) => d.users);
+  } catch (error) {
+    console.error("Error fetching group members:", error);
+    throw error;
+  }
 };
 
 export const addUserToGroup = async (userGroup: Partial<UserGroup>) => {
@@ -771,79 +867,54 @@ export const deleteSharedModelLink = async (id: string) => {
   }
 };
 
-interface DeleteSharesResult {
-  success: boolean;
-  deletedCount: number;
-  errors: string[];
-}
-
-export const deleteShare = async (type: 'group' | 'model', id: string): Promise<boolean> => {
+export const deleteShare = async (type: 'group' | 'model', id: string) => {
   try {
     const table = type === 'group' ? 'shared_links' : 'shared_model_links';
-    console.log(`Deleting ${type} share with ID:`, id);
-    console.log(`Using table:`, table);
-
     const { error } = await supabase
       .from(table)
       .delete()
       .eq('id', id);
 
-    if (error) {
-      console.error(`Error deleting ${type} share:`, error);
-      throw error;
-    }
-
-    console.log(`Successfully deleted ${type} share`);
+    if (error) throw error;
     return true;
-  } catch (err) {
-    console.error(`Failed to delete ${type} share:`, err);
+  } catch (error) {
+    console.error(`Error deleting ${type} share:`, error);
     return false;
   }
 };
 
-export const deleteManyShares = async (shares: {
-  type: 'group' | 'model';
-  ids: string[];
-}[]): Promise<DeleteSharesResult> => {
-  console.log('Starting batch delete with shares:', shares);
-  
-  const results = {
-    success: true,
-    deletedCount: 0,
-    errors: [] as string[]
-  };
+export const deleteManyShares = async (shares: { type: 'group' | 'model', ids: string[] }[]) => {
+  try {
+    let deletedCount = 0;
+    const errors: string[] = [];
 
-  for (const { type, ids } of shares) {
-    try {
-      console.log(`Processing ${type} shares:`, ids);
-      
-      if (!ids.length) continue;
-      
-      const table = type === 'group' ? 'shared_links' : 'shared_model_links';
-      console.log(`Using table:`, table);
-
+    for (const share of shares) {
+      const table = share.type === 'group' ? 'shared_links' : 'shared_model_links';
       const { error } = await supabase
         .from(table)
         .delete()
-        .in('id', ids);
-      
-      if (error) {
-        console.error(`Error deleting ${type} shares:`, error);
-        results.success = false;
-        results.errors.push(`Failed to delete ${type} shares: ${error.message}`);
-      } else {
-        console.log(`Successfully deleted ${ids.length} ${type} shares`);
-        results.deletedCount += ids.length;
-      }
-    } catch (err) {
-      console.error(`Error in batch delete for ${type}:`, err);
-      results.success = false;
-      results.errors.push(`Unexpected error deleting ${type} shares: ${err.message}`);
-    }
-  }
+        .in('id', share.ids);
 
-  console.log('Batch delete completed with results:', results);
-  return results;
+      if (error) {
+        errors.push(`Error deleting ${share.type} shares: ${error.message}`);
+      } else {
+        deletedCount += share.ids.length;
+      }
+    }
+
+    return {
+      success: errors.length === 0,
+      deletedCount,
+      errors
+    };
+  } catch (error) {
+    console.error('Error in deleteManyShares:', error);
+    return {
+      success: false,
+      deletedCount: 0,
+      errors: [error.message]
+    };
+  }
 };
 
 export const cleanExpiredCodes = async () => {

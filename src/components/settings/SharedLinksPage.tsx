@@ -28,23 +28,17 @@ import { deleteShare, deleteManyShares } from "@/lib/db/queries";
 
 interface SharedLinkBase {
   id: string;
-  created_by: string;
-  access_token: string;
-  expires_at: string | null;
-  access_type: string;
-  one_time_view: boolean;
   created_at: string;
+  access_token: string;
   views_count: number;
-  user?: {
-    name: string;
-    email: string;
-  };
+  access_type: 'anyone' | 'specific';
 }
 
 interface SharedGroupLink extends SharedLinkBase {
   type: 'group';
   group_id: string;
   group: {
+    id: string;
     title: string;
   };
 }
@@ -53,6 +47,7 @@ interface SharedModelLink extends SharedLinkBase {
   type: 'model';
   model_id: string;
   model: {
+    id: string;
     name: string;
     username: string;
   };
@@ -84,15 +79,38 @@ const SharedLinksPage = () => {
 
   const fetchSharedLinks = async () => {
     try {
-      const { data: linkData, error: linkError } = await supabase
+      // Fetch group shared links
+      const { data: groupLinkData, error: groupLinkError } = await supabase
         .from("shared_links")
-        .select("*")
+        .select(`
+          id,
+          created_at,
+          access_token,
+          views_count,
+          access_type,
+          group_id
+        `)
         .order("created_at", { ascending: false });
 
-      if (linkError) throw linkError;
+      if (groupLinkError) throw groupLinkError;
 
-      // Fetch groups for those links
-      const groupIds = [...new Set((linkData || []).map(link => link.group_id))];
+      // Fetch model shared links
+      const { data: modelLinkData, error: modelLinkError } = await supabase
+        .from("shared_model_links")
+        .select(`
+          id,
+          created_at,
+          access_token,
+          views_count,
+          access_type,
+          model_id
+        `)
+        .order("created_at", { ascending: false });
+
+      if (modelLinkError) throw modelLinkError;
+
+      // Fetch groups for group links
+      const groupIds = [...new Set((groupLinkData || []).map(link => link.group_id))];
       const { data: groupsData } = await supabase
         .from("groups")
         .select("id, title")
@@ -103,14 +121,37 @@ const SharedLinksPage = () => {
         (groupsData || []).map(group => [group.id, group])
       );
 
+      // Fetch models for model links
+      const modelIds = [...new Set((modelLinkData || []).map(link => link.model_id))];
+      const { data: modelsData } = await supabase
+        .from("models")
+        .select("id, name, username")
+        .in("id", modelIds);
+
+      // Create models lookup map
+      const modelsMap = new Map(
+        (modelsData || []).map(model => [model.id, model])
+      );
+
       // Transform group links
-      const transformedGroupLinks: SharedLink[] = (linkData || []).map(link => ({
+      const transformedGroupLinks: SharedLink[] = (groupLinkData || []).map(link => ({
         ...link,
         type: 'group' as const,
-        group: groupsMap.get(link.group_id) || { title: 'Unknown Group', id: link.group_id }
+        group: groupsMap.get(link.group_id) || { id: link.group_id, title: 'Unknown Group' }
       }));
 
-      setSharedLinks(transformedGroupLinks);
+      // Transform model links
+      const transformedModelLinks: SharedLink[] = (modelLinkData || []).map(link => ({
+        ...link,
+        type: 'model' as const,
+        model: modelsMap.get(link.model_id) || { id: link.model_id, name: 'Unknown Model', username: '' }
+      }));
+
+      // Combine and sort all links by created_at
+      const allLinks = [...transformedGroupLinks, ...transformedModelLinks]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      setSharedLinks(allLinks);
     } catch (err) {
       console.error("Error fetching shared links:", err);
       toast({
@@ -202,7 +243,7 @@ const SharedLinksPage = () => {
 
   const handleCopyLink = async (link: SharedLink) => {
     const url = link.type === 'group'
-      ? `${window.location.origin}/share/${link.group_id}?token=${link.access_token}`
+      ? `${window.location.origin}/share/group/${link.group_id}?token=${link.access_token}`
       : `${window.location.origin}/share/model/${link.model_id}?token=${link.access_token}`;
     
     try {
@@ -223,7 +264,7 @@ const SharedLinksPage = () => {
 
   const handleOpenLink = (link: SharedLink) => {
     const url = link.type === 'group'
-      ? `${window.location.origin}/share/${link.group_id}?token=${link.access_token}`
+      ? `${window.location.origin}/share/group/${link.group_id}?token=${link.access_token}`
       : `${window.location.origin}/share/model/${link.model_id}?token=${link.access_token}`;
     
     window.open(url, '_blank');
@@ -232,6 +273,29 @@ const SharedLinksPage = () => {
   const toggleMobileSidebar = useCallback(() => {
     setIsMobileSidebarOpen(prev => !prev);
   }, []);
+
+  const toggleSelection = (link: SharedLink) => {
+    const newSelected = new Set(selected.links);
+    if (newSelected.has(link.id)) {
+      newSelected.delete(link.id);
+    } else {
+      newSelected.add(link.id);
+    }
+
+    // Count selected items by type
+    const groupCount = sharedLinks.filter(l => 
+      l.type === 'group' && newSelected.has(l.id)
+    ).length;
+    const modelCount = sharedLinks.filter(l => 
+      l.type === 'model' && newSelected.has(l.id)
+    ).length;
+
+    setSelected({
+      links: newSelected,
+      groupCount,
+      modelCount
+    });
+  };
 
   const filteredLinks = sharedLinks.filter(link => {
     const matchesSearch = searchTerm.toLowerCase().trim() === "" || 
@@ -320,8 +384,25 @@ const SharedLinksPage = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-12">
+                      <Checkbox
+                        checked={filteredLinks.length > 0 && selected.links.size === filteredLinks.length}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            const allIds = new Set(filteredLinks.map(link => link.id));
+                            const groupCount = filteredLinks.filter(l => l.type === 'group').length;
+                            const modelCount = filteredLinks.filter(l => l.type === 'model').length;
+                            setSelected({ links: allIds, groupCount, modelCount });
+                          } else {
+                            setSelected({ links: new Set(), groupCount: 0, modelCount: 0 });
+                          }
+                        }}
+                      />
+                    </TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Name</TableHead>
+                    <TableHead>Access</TableHead>
+                    <TableHead>Views</TableHead>
                     <TableHead>Created At</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -330,12 +411,26 @@ const SharedLinksPage = () => {
                   {filteredLinks.map((link) => (
                     <TableRow key={link.id}>
                       <TableCell>
+                        <Checkbox
+                          checked={selected.links.has(link.id)}
+                          onCheckedChange={() => toggleSelection(link)}
+                        />
+                      </TableCell>
+                      <TableCell>
                         <Badge variant={link.type === 'group' ? 'default' : 'secondary'}>
                           {link.type === 'group' ? 'Group' : 'Model'}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         {link.type === 'group' ? link.group.title : link.model.name}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={link.access_type === 'anyone' ? 'outline' : 'secondary'}>
+                          {link.access_type === 'anyone' ? 'Anyone' : 'Specific Users'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {link.views_count || 0}
                       </TableCell>
                       <TableCell>{new Date(link.created_at).toLocaleDateString()}</TableCell>
                       <TableCell>
@@ -353,6 +448,34 @@ const SharedLinksPage = () => {
                             onClick={() => handleOpenLink(link)}
                           >
                             <ExternalLink className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                const result = await deleteShare(link.type, link.id);
+                                if (result) {
+                                  toast({
+                                    title: "Success",
+                                    description: "Share link deleted successfully"
+                                  });
+                                  await fetchSharedLinks();
+                                } else {
+                                  throw new Error("Failed to delete share link");
+                                }
+                              } catch (err) {
+                                console.error("Failed to delete link:", err);
+                                toast({
+                                  title: "Error",
+                                  description: err instanceof Error ? err.message : "Failed to delete the share link",
+                                  variant: "destructive"
+                                });
+                              }
+                            }}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </TableCell>

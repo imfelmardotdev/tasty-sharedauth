@@ -123,11 +123,6 @@ const SharedModelView = () => {
               <p className="mt-1">{model.username}</p>
             </div>
 
-            <div>
-              <h3 className="text-sm font-medium text-gray-500">Code</h3>
-              <p className="mt-1">{model.code}</p>
-            </div>
-
             {model.totp_secret && (
               <div>
                 <h3 className="text-sm font-medium text-gray-500">2FA Code</h3>

@@ -84,9 +84,11 @@ const TOTPDisplay = ({ secret, modelId }: TOTPDisplayProps) => {
 
   return (
     <div className="space-y-2">
-      <div className={`font-mono text-lg ${updateError ? 'text-yellow-500' : ''}`}>{code}</div>
-      <Progress value={(timeRemaining / 30) * 100} className="h-1" />
-      <div className="text-xs text-gray-500">
+      <div className={`font-mono text-4xl tracking-[0.5em] text-primary font-semibold ${updateError ? 'text-yellow-500' : ''}`}>
+        {code}
+      </div>
+      <Progress value={(timeRemaining / 30) * 100} className="h-1.5 bg-gray-100" />
+      <div className="text-sm text-muted-foreground text-center">
         Refreshes in {timeRemaining}s
       </div>
     </div>

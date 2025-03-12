@@ -103,6 +103,13 @@ const ShareModal = ({
         timestamp: new Date().toISOString()
       });
 
+      // Add debug logging for authentication state
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('Current auth session:', session);
+      if (!session) {
+        throw new Error('No active session found. Please log in again.');
+      }
+
       const { data: shareLink, error } = await supabase
         .from("shared_links")
         .insert([newShareLink])
@@ -121,7 +128,7 @@ const ShareModal = ({
         throw new Error("No share link data returned");
       }
 
-      const url = `${window.location.origin}/share/${groupId}?token=${shareLink.access_token}`;
+      const url = `${window.location.origin}/share/group/${groupId}?token=${shareLink.access_token}`;
       console.log("Generated URL:", url);
       setShareUrl(url);
 

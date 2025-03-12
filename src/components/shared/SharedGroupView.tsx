@@ -3,6 +3,8 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield } from "lucide-react";
+import GroupTOTPDisplay from "../group/GroupTOTPDisplay";
+import { Progress } from "@/components/ui/progress";
 
 interface Code {
   id: string;
@@ -10,6 +12,7 @@ interface Code {
   code: string;
   created_at: string;
   expires_at: string;
+  secret?: string;
 }
 
 interface SharedGroup {
@@ -17,6 +20,7 @@ interface SharedGroup {
   title: string;
   description?: string;
   codes?: Code[];
+  totp_secret?: string;
 }
 
 interface ShareLink {
@@ -119,19 +123,19 @@ const SharedGroupView = () => {
 
     // Channel for code updates
     const codeChannel = supabase
-      .channel(`codes-${groupId}`)
+      .channel(`group-codes-${groupId}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'codes',
+          table: 'group_codes',
           filter: `group_id=eq.${groupId}`
         },
         async () => {
           console.log('🔄 New code added, fetching...');
           const { data: codes } = await supabase
-            .from("codes")
+            .from("group_codes")
             .select("*")
             .eq("group_id", groupId)
             .order("created_at", { ascending: false })
@@ -271,7 +275,6 @@ const SharedGroupView = () => {
     let mounted = true;
     let checkInterval: NodeJS.Timeout;
 
-
     const loadSharedGroup = async () => {
       if (!supabase || !groupId || !token) {
         console.error('Missing required parameters');
@@ -305,35 +308,51 @@ const SharedGroupView = () => {
         }
 
         // Fetch group data
-          const { data: groupData, error: groupError } = await supabase
-            .from("groups")
-            .select(`
-              *,
-              codes(id, name, code, notes, created_at, expires_at)
-            `)
-            .eq("id", groupId)
-            .single();
+        const { data: groupData, error: groupError } = await supabase
+          .from("groups")
+          .select(`
+            id,
+            title,
+            description
+          `)
+          .eq("id", groupId)
+          .single();
 
-          if (groupError) throw groupError;
+        if (groupError) throw groupError;
 
-          // Fetch latest code
-          const { data: codes, error: codesError } = await supabase
-            .from("codes")
-            .select("*")
-            .eq("group_id", groupId)
-            .order("created_at", { ascending: false })
-            .limit(1);
+        // Fetch group codes separately
+        const { data: groupCodes, error: groupCodesError } = await supabase
+          .from("group_codes")
+          .select(`
+            id,
+            group_id,
+            code,
+            created_at,
+            expires_at,
+            secret
+          `)
+          .eq("group_id", groupId)
+          .order("created_at", { ascending: false })
+          .limit(1);
 
-          if (codesError) {
-            console.error("Error fetching code:", codesError);
-          } else {
-            setLatestCode(codes?.[0] || null);
-          }
+        if (groupCodesError) {
+          console.error("Error fetching group codes:", groupCodesError);
+        }
 
+        console.log('Debug - Fetched Data:', {
+          groupData,
+          groupCodes,
+          hasSecret: !!groupCodes?.[0]?.secret,
+          hasLatestCode: !!groupCodes?.[0]
+        });
 
-          if (mounted) {
-            setGroup(groupData);
-          }
+        if (mounted) {
+          setGroup({
+            ...groupData,
+            codes: groupCodes || []
+          });
+          setLatestCode(groupCodes?.[0] || null);
+        }
       } catch (err) {
         console.error("Error:", err);
         if (mounted) {
@@ -347,16 +366,6 @@ const SharedGroupView = () => {
     };
 
     loadSharedGroup();
-
-    // Set up periodic verification
-    checkInterval = setInterval(async () => {
-      const isStillValid = await verifyShareLink();
-      if (!isStillValid && mounted) {
-        setError("This share link is no longer valid");
-        setGroup(null);
-      }
-    }, 10000);
-
     return () => { 
       mounted = false;
       if (checkInterval) clearInterval(checkInterval);
@@ -417,9 +426,14 @@ const SharedGroupView = () => {
                 Warning: This is a single-use link. Once you close this page, you won't be able to access it again.
               </div>
             )}
-            <div className="text-4xl font-mono tracking-[0.5em] text-primary font-semibold">
-              {latestCode?.code || "------"}
-            </div>
+            {latestCode?.secret && latestCode?.id && (
+              <div className="w-full">
+                <GroupTOTPDisplay 
+                  secret={latestCode.secret}
+                  codeId={latestCode.id}
+                />
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <span className={`w-2 h-2 rounded-full ${
                 !linkTimeRemaining || linkTimeRemaining <= 0 

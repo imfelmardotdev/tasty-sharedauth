@@ -113,8 +113,8 @@ function AppContent() {
                   </AuthGuard>
                 }
               />
-              <Route path="/share/:groupId" element={<SharedGroupView />} />
-              <Route path="/share/:id" element={<SharedModelView />} />
+              <Route path="/share/group/:groupId" element={<SharedGroupView />} />
+              <Route path="/share/model/:id" element={<SharedModelView />} />
               <Route
                 path="/"
                 element={<Navigate to="/dashboard" replace />}
