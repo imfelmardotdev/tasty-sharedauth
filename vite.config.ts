@@ -22,21 +22,23 @@ export default defineConfig({
       include: [/node_modules/],
       transformMixedEsModules: true
     },
+    modulePreload: {
+      polyfill: true
+    },
     rollupOptions: {
       output: {
-        manualChunks: {
-          'qr-scanner': ['qr-scanner'],
-          'vendor': [
-            'react',
-            'react-dom',
-            'react-router-dom',
-            'zod',
-            '@hookform/resolvers/zod',
-            'react-hook-form',
-            '@supabase/supabase-js'
-          ]
-        },
-      },
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('zod') || id.includes('@hookform/resolvers/zod')) {
+              return 'zod-chunk';
+            }
+            if (id.includes('qr-scanner')) {
+              return 'qr-scanner';
+            }
+            return 'vendor';
+          }
+        }
+      }
     },
   },
   plugins: [
@@ -47,6 +49,8 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    mainFields: ['module', 'jsnext:main', 'jsnext', 'main'],
+    extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json']
   },
   server: {
     host: true, // This enables listening on all addresses
