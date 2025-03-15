@@ -6,20 +6,35 @@ import react from "@vitejs/plugin-react-swc";
 export default defineConfig({
   base: "/",
   optimizeDeps: {
-    entries: ["src/main.tsx"],
     include: [
-      'qr-scanner',
-      '@supabase/supabase-js',
-      'react-hook-form',
       'zod',
-    ],
+      'react',
+      'react-dom',
+      'react-router-dom',
+      '@hookform/resolvers/zod',
+      'react-hook-form',
+      '@supabase/supabase-js'
+    ]
   },
   build: {
     target: 'esnext',
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true
+    },
     rollupOptions: {
       output: {
         manualChunks: {
           'qr-scanner': ['qr-scanner'],
+          'vendor': [
+            'react',
+            'react-dom',
+            'react-router-dom',
+            'zod',
+            '@hookform/resolvers/zod',
+            'react-hook-form',
+            '@supabase/supabase-js'
+          ]
         },
       },
     },
