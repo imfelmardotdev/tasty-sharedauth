@@ -5,6 +5,21 @@ import react from "@vitejs/plugin-react-swc";
 // https://vitejs.dev/config/
 export default defineConfig({
   base: "/",
+  build: {
+    target: 'esnext',
+    modulePreload: {
+      polyfill: true
+    },
+    sourcemap: false,
+    reportCompressedSize: false,
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true
+    }
+  },
+  define: {
+    'process.env.NODE_ENV': '"production"'
+  },
   optimizeDeps: {
     include: [
       'zod',
@@ -14,32 +29,13 @@ export default defineConfig({
       '@hookform/resolvers/zod',
       'react-hook-form',
       '@supabase/supabase-js'
-    ]
-  },
-  build: {
-    target: 'esnext',
-    commonjsOptions: {
-      include: [/node_modules/],
-      transformMixedEsModules: true
-    },
-    modulePreload: {
-      polyfill: true
-    },
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes('node_modules')) {
-            if (id.includes('zod') || id.includes('@hookform/resolvers/zod')) {
-              return 'zod-chunk';
-            }
-            if (id.includes('qr-scanner')) {
-              return 'qr-scanner';
-            }
-            return 'vendor';
-          }
-        }
-      }
-    },
+    ],
+    esbuildOptions: {
+      target: 'es2020',
+      supported: { 
+        'top-level-await': true 
+      },
+    }
   },
   plugins: [
     react(),
