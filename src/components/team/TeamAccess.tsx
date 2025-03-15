@@ -315,13 +315,20 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => 
                     placeholder="Search by name..."
                     onChange={handleSearchChange}
                     className="flex-1 sm:w-[200px]"
+                    value={nameSearchQuery}
                   />
                   {nameSearchQuery && (
                     <Button
                       variant="ghost"
                       size="sm"
                       className="absolute right-2 top-1/2 -translate-y-1/2 h-auto p-1"
-                      onClick={() => setNameSearchQuery("")}
+                      onClick={() => {
+                        setNameSearchQuery("");
+                        const inputElement = document.querySelector('input[placeholder="Search by name..."]') as HTMLInputElement;
+                        if (inputElement) {
+                          inputElement.value = "";
+                        }
+                      }}
                     >
                       <X className="h-4 w-4" />
                     </Button>
