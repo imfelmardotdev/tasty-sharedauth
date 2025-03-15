@@ -58,7 +58,7 @@ const Header = ({ currentRole = "User", toggleMobileSidebar }: HeaderProps) => {
         <Button variant="outline" className="gap-2" disabled>
           <Key className="w-4 h-4" />
           <span className="hidden sm:inline">{currentRole}</span>
-          <span className="sm:hidden">{currentRole.charAt(0)}</span>
+          <span className="sm:hidden">{currentRole}</span>
         </Button>
         {isMobile && (
           <LogoutButton />

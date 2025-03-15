@@ -5,7 +5,7 @@ interface StatsCardProps {
   title: string;
   value: number;
   icon: LucideIcon;
-  description?: string;
+  description?: string | JSX.Element;
   onClick?: () => void;
 }
 

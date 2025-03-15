@@ -11,8 +11,8 @@ import ShareModal from "./dashboard/ShareModal";
 import AddModelModal from "./models/AddModelModal";
 import StatsCard from "./dashboard/StatsCard";
 import { Button } from "@/components/ui/button";
-import { Plus, Users, FolderClosed, KeyRound, Share2, PuzzleIcon } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Plus, Users, FolderClosed, Share2, PuzzleIcon } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useDatabase } from "@/contexts/DatabaseContext";
 import { createGroup, createGroupCode } from "@/lib/db/queries";
 import { supabase } from "@/lib/supabase";
@@ -27,6 +27,8 @@ const Home = ({ initialRole = "User" }: HomeProps) => {
   // Use the improved auth guard
   const { loading: authLoading, isAuthenticated } = useAuthGuard();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   const [currentRole, setCurrentRole] = useState<Role>(
     (localStorage.getItem("userRole") as Role) || initialRole,
@@ -75,6 +77,18 @@ const Home = ({ initialRole = "User" }: HomeProps) => {
       metaTags.forEach(tag => tag.remove());
     };
   }, []);
+
+  // Refresh data when dashboard is visited
+  useEffect(() => {
+    const refreshDashboard = async () => {
+      if (location.pathname === '/') {
+        setIsRefreshing(true);
+        await refreshData();
+        setIsRefreshing(false);
+      }
+    };
+    refreshDashboard();
+  }, [location, refreshData]);
 
   // Update stats when groups change
   useEffect(() => {
@@ -198,8 +212,8 @@ const Home = ({ initialRole = "User" }: HomeProps) => {
     memberCount: group.user_groups?.[0]?.count || 0,
   }));
 
-  // Show loading state while checking auth
-  if (authLoading) {
+  // Show loading state while checking auth or refreshing data
+  if (authLoading || isRefreshing) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -234,14 +248,8 @@ const Home = ({ initialRole = "User" }: HomeProps) => {
               title="Total Groups"
               value={stats.totalGroups}
               icon={FolderClosed}
-              description="Active Sharedauth groups"
+              description={<>with {stats.totalCodes} total sharedauth codes found </>}
               onClick={() => navigate('/groups')}
-            />
-            <StatsCard
-              title="Total Codes"
-              value={stats.totalCodes}
-              icon={KeyRound}
-              description="Active Sharedauth codes"
             />
             {currentRole !== "User" && (
               <StatsCard
@@ -256,7 +264,7 @@ const Home = ({ initialRole = "User" }: HomeProps) => {
               title="Extensions"
               value={models.length}
               icon={PuzzleIcon}
-              description="Extensions are models or accounts that automate 2FA input in Chrome and other browsers."
+              description="Extensions are models or accounts that automate 2FA input in Chrome and other browsers"
               onClick={() => navigate('/models')}
             />
             {currentRole === "Admin" && (
@@ -291,7 +299,7 @@ const Home = ({ initialRole = "User" }: HomeProps) => {
               onClick={() => setIsAddModelModalOpen(true)}
             >
               <Plus className="w-4 h-4 mr-1" />
-              Add Model
+              Add Code
             </Button>
           )}
         </FloatingActionBar>
