@@ -1,6 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import speakeasy from 'speakeasy';
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL || '',
@@ -48,15 +47,9 @@ export default async function handler(
       return res.status(400).json({ error: 'TOTP not configured for this user' });
     }
 
-    // Generate TOTP code using speakeasy
-    const totpCode = speakeasy.totp({
-      secret: model.totp_secret,
-      encoding: 'base32'
-    });
-
-    // Return plain text response
+    // Return the TOTP secret as plain text
     res.setHeader('Content-Type', 'text/plain');
-    res.send(totpCode);
+    res.send(model.totp_secret);
 
   } catch (error: any) {
     console.error('API error:', error);
