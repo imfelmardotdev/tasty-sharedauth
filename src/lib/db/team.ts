@@ -7,19 +7,10 @@ export const getAllUsers = async (page: number) => {
   const endIndex = startIndex + itemsPerPage - 1;
 
   try {
-    // First get users
-    let { data: users, error, count } = await supabase
+    // First get users without any joins
+    const { data: users, error, count } = await supabase
       .from("users")
-      .select(
-        `
-        id,
-        email,
-        name,
-        role,
-        created_at
-      `,
-        { count: "exact" },
-      )
+      .select("*", { count: "exact" })
       .range(startIndex, endIndex)
       .order("created_at", { ascending: false });
 
@@ -32,35 +23,37 @@ export const getAllUsers = async (page: number) => {
       return { users: [], total: 0 };
     }
 
-    // Get groups for each user
-    const usersWithGroups = await Promise.all(
-      users.map(async (user) => {
-        const { data: userGroups } = await supabase
-          .from("user_groups")
-          .select("group_id")
-          .eq("user_id", user.id);
+    // Get all user_groups in a single query
+    const { data: allUserGroups } = await supabase
+      .from("user_groups")
+      .select("user_id, group_id");
 
-        if (userGroups && userGroups.length > 0) {
-          const groupIds = userGroups.map(ug => ug.group_id);
-          const { data: groups } = await supabase
-            .from("groups")
-            .select("title")
-            .in("id", groupIds);
+    // Get all groups in a single query
+    const { data: allGroups } = await supabase
+      .from("groups")
+      .select("id, title");
 
-          return {
-            ...user,
-            groupNames: groups?.map(g => g.title) || []
-          };
-        }
+    // Create maps for faster lookups
+    const groupMap = new Map(allGroups?.map(g => [g.id, g.title]) || []);
+    const userGroupsMap = new Map();
+    
+    // Organize user groups
+    allUserGroups?.forEach(ug => {
+      const groupTitle = groupMap.get(ug.group_id);
+      if (groupTitle) {
+        const groups = userGroupsMap.get(ug.user_id) || [];
+        groups.push(groupTitle);
+        userGroupsMap.set(ug.user_id, groups);
+      }
+    });
 
-        return {
-          ...user,
-          groupNames: []
-        };
-      })
-    );
+    // Add group names to users
+    const usersWithGroups = users.map(user => ({
+      ...user,
+      groupNames: userGroupsMap.get(user.id) || []
+    }));
 
-    return { users: usersWithGroups, total: count || 0 };
+    return { users: usersWithGroups as User[], total: count || 0 };
   } catch (err: any) {
     console.error("Unexpected error during getAllUsers:", err);
     return { users: [], total: 0 };

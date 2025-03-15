@@ -51,6 +51,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { debounce } from "lodash";
 
 const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => {
   const { toast } = useToast();
@@ -72,20 +73,34 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => 
     Array.from(new Set(members.flatMap(m => m.groupNames || []))).sort()
   , [members]);
 
+  const debouncedSearch = useCallback(
+    debounce((query: string) => {
+      setNameSearchQuery(query);
+    }, 300),
+    []
+  );
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    debouncedSearch(e.target.value);
+  };
+
   const filteredMembers = useMemo(() => {
     let filtered = members;
     
     // Apply name search filter
     if (nameSearchQuery) {
+      const searchLower = nameSearchQuery.toLowerCase();
       filtered = filtered.filter(member => 
-        member.name.toLowerCase().includes(nameSearchQuery.toLowerCase())
+        member.name.toLowerCase().includes(searchLower) ||
+        member.email.toLowerCase().includes(searchLower)
       );
     }
     
-    // Apply group filter
+    // Apply group filter using Set for better performance
     if (selectedGroups.length > 0) {
+      const groupSet = new Set(selectedGroups);
       filtered = filtered.filter(member => 
-        member.groupNames?.some(group => selectedGroups.includes(group))
+        member.groupNames?.some(group => groupSet.has(group))
       );
     }
     
@@ -134,27 +149,15 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => 
           {
             event: '*',
             schema: 'public',
-            table: 'users'
+            table: 'users',
+            filter: `role=in.(Admin,Manager,User)` // Only subscribe to relevant role changes
           },
-          (payload) => {
+          async (payload) => {
             if (!isMounted) return;
 
-            if (payload.eventType === 'INSERT') {
-              setMembers((prev) => [...prev, payload.new]);
-              setTotalMembers((prev) => prev + 1);
-            } else if (payload.eventType === 'DELETE') {
-              setMembers((prev) =>
-                prev.filter((member) => member.id !== payload.old.id)
-              );
-              setTotalMembers((prev) => prev - 1);
-            } else if (payload.eventType === 'UPDATE') {
-              setMembers((prev) =>
-                prev.map((member) =>
-                  member.id === payload.new.id
-                    ? { ...member, ...payload.new }
-                    : member
-                )
-              );
+            // Instead of directly updating state, refetch data to ensure consistency
+            if (['INSERT', 'DELETE', 'UPDATE'].includes(payload.eventType)) {
+              await fetchMembers(currentPage);
             }
           }
         )
@@ -169,7 +172,7 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => 
     return () => {
       isMounted = false;
     };
-  }, [role]);
+  }, [role, currentPage]);
 
   const handleAddMember = async (values: {
     name: string;
@@ -311,8 +314,8 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => 
                 <div className="relative">
                   <Input
                     placeholder="Search by name..."
-                    value={nameSearchQuery}
-                    onChange={(e) => setNameSearchQuery(e.target.value)}
+                    onChange={handleSearchChange}
+                    className="flex-1 sm:w-[200px]"
                   />
                   {nameSearchQuery && (
                     <Button

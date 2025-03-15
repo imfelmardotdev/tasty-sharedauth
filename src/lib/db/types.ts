@@ -4,9 +4,6 @@ export interface User {
   name: string;
   role: "Admin" | "Manager" | "User";
   created_at: string;
-  user_groups?: { 
-    group_id: string;
-  }[] | null;
   groupNames?: string[];
 }
 
