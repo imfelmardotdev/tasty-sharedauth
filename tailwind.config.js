@@ -15,7 +15,7 @@ module.exports = {
     fontFamily: {
       orbitron: ['Orbitron', 'sans-serif'],
       helvetica: ['Helvetica', 'Arial', 'sans-serif'],
-      arial: ['Arial', 'Helvetica', 'sans-serif'],
+      inter: ['Inter', 'sans-serif'],
     },
     container: {
       center: true,

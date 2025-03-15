@@ -19,7 +19,7 @@ const themes = [
 const fonts = [
   { value: "orbitron", label: "Orbitron", className: "font-orbitron" },
   { value: "helvetica", label: "Helvetica", className: "font-helvetica" },
-  { value: "arial", label: "Arial", className: "font-arial" },
+  { value: "inter", label: "Inter", className: "font-inter" },
 ];
 
 const SettingsPage = () => {
