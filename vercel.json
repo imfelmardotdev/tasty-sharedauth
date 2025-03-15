@@ -1,8 +1,10 @@
 {
-  "rewrites": [
+  "version": 2,
+  "routes": [
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/api/get-totp",
+      "methods": ["POST"],
+      "dest": "/api/get-totp.ts"
     }
   ]
 }
