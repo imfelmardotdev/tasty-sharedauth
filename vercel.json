@@ -5,6 +5,14 @@
       "src": "/api/get-totp",
       "methods": ["POST"],
       "dest": "/api/get-totp.ts"
+    },
+    {
+      "src": "^/assets/(.*)",
+      "dest": "/assets/$1"
+    },
+    {
+      "src": ".*",
+      "dest": "/index.html"
     }
   ]
 }
