@@ -65,8 +65,9 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [nameSearchQuery, setNameSearchQuery] = useState("");
   
-  // Ensure we have a valid role, defaulting to User if null/undefined
-  const role = currentRole || "User";
+  // Get role from localStorage if not provided as prop
+  const role = currentRole || localStorage.getItem("userRole") as Role || "User";
+  console.log('Current role:', role); // Debug log
 
   const availableGroups = useMemo(() => 
     Array.from(new Set(members.flatMap(m => m.groupNames || []))).sort()
@@ -110,68 +111,81 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => 
     setIsMobileSidebarOpen(prev => !prev);
   }, []);
 
-  const fetchMembers = async (page = 1) => {
-    if (role !== "Admin" && role !== "Manager") {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const { users, total } = await getAllUsers(page);
-      setMembers(users as User[]);
-      setTotalMembers(total);
-      setCurrentPage(page);
-    } catch (err) {
-      console.error("Error fetching team members:", err);
-      setMembers([]);
-      setTotalMembers(0);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
     let isMounted = true;
+    let channel: RealtimeChannel | null = null;
 
-    // Initial fetch
-    if (role === "Admin" || role === "Manager") {
-      fetchMembers(1);
-    }
+    const initializeTeamAccess = async () => {
+      try {
+        console.log('Initializing team access with role:', role);
+        
+        if (role !== "Admin" && role !== "Manager") {
+          console.log('Access denied - insufficient permissions');
+          setLoading(false);
+          return;
+        }
 
-    // Set up realtime subscription only if user has proper permissions
-    if (supabase && (role === "Admin" || role === "Manager")) {
-      const channel = supabase
-        .channel('users-changes')
-        .on<User>(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'users',
-            filter: `role=in.(Admin,Manager,User)` // Only subscribe to relevant role changes
-          },
-          async (payload) => {
-            if (!isMounted) return;
+        // Initial fetch
+        const { users, total } = await getAllUsers(1);
+        if (isMounted) {
+          setMembers(users as User[]);
+          setTotalMembers(total);
+          setCurrentPage(1);
+          setLoading(false);
+        }
 
-            // Instead of directly updating state, refetch data to ensure consistency
-            if (['INSERT', 'DELETE', 'UPDATE'].includes(payload.eventType)) {
-              await fetchMembers(currentPage);
-            }
-          }
-        )
-        .subscribe();
+        // Set up realtime subscription
+        if (supabase) {
+          channel = supabase
+            .channel('users-changes')
+            .on<User>(
+              'postgres_changes',
+              {
+                event: '*',
+                schema: 'public',
+                table: 'users'
+              },
+              async (payload) => {
+                console.log('Received realtime update:', payload);
+                if (!isMounted) return;
 
-      return () => {
-        supabase.removeChannel(channel);
-        isMounted = false;
-      };
-    }
+                // Refetch data to ensure consistency
+                if (['INSERT', 'DELETE', 'UPDATE'].includes(payload.eventType)) {
+                  const { users: updatedUsers, total: updatedTotal } = await getAllUsers(currentPage);
+                  if (isMounted) {
+                    setMembers(updatedUsers as User[]);
+                    setTotalMembers(updatedTotal);
+                  }
+                }
+              }
+            )
+            .subscribe((status) => {
+              console.log('Supabase subscription status:', status);
+            });
+        }
+      } catch (error) {
+        console.error('Error initializing team access:', error);
+        if (isMounted) {
+          setLoading(false);
+          toast({
+            title: "Error",
+            description: "Failed to initialize team access. Please try refreshing the page.",
+            variant: "destructive",
+          });
+        }
+      }
+    };
+
+    initializeTeamAccess();
 
     return () => {
       isMounted = false;
+      if (channel) {
+        console.log('Cleaning up Supabase subscription');
+        supabase.removeChannel(channel);
+      }
     };
-  }, [role, currentPage]);
+  }, [role, currentPage, toast]);
 
   const handleAddMember = async (values: {
     name: string;
@@ -194,7 +208,9 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => 
       });
 
       // Refresh the current page
-      await fetchMembers(currentPage);
+      const { users, total } = await getAllUsers(currentPage);
+      setMembers(users as User[]);
+      setTotalMembers(total);
       setIsAddModalOpen(false);
     } catch (err: any) {
       console.error("Error adding team member:", err);
@@ -218,7 +234,9 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => 
       });
 
       // Refresh the current page
-      await fetchMembers(currentPage);
+      const { users, total } = await getAllUsers(currentPage);
+      setMembers(users as User[]);
+      setTotalMembers(total);
       setEditingMember(null);
     } catch (err) {
       console.error("Error updating team member:", err);
@@ -230,7 +248,9 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => 
 
     try {
       await deleteTeamMember(deletingMember);
-      await fetchMembers(currentPage);
+      const { users, total } = await getAllUsers(currentPage);
+      setMembers(users as User[]);
+      setTotalMembers(total);
       setDeletingMember(null);
     } catch (err) {
       console.error("Error deleting team member:", err);
@@ -546,7 +566,13 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => 
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => fetchMembers(currentPage - 1)}
+                  onClick={async () => {
+                    const newPage = currentPage - 1;
+                    const { users, total } = await getAllUsers(newPage);
+                    setMembers(users as User[]);
+                    setTotalMembers(total);
+                    setCurrentPage(newPage);
+                  }}
                   disabled={currentPage === 1 || loading}
                 >
                   Previous
@@ -554,7 +580,13 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => 
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => fetchMembers(currentPage + 1)}
+                  onClick={async () => {
+                    const newPage = currentPage + 1;
+                    const { users, total } = await getAllUsers(newPage);
+                    setMembers(users as User[]);
+                    setTotalMembers(total);
+                    setCurrentPage(newPage);
+                  }}
                   disabled={currentPage * 20 >= totalMembers || loading}
                 >
                   Next
