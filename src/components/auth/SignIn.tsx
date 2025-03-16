@@ -129,6 +129,16 @@ const SignIn = () => {
                 Sign In
               </Button>
 
+              <div className="text-center mt-2">
+                <Button
+                  variant="link"
+                  className="text-sm text-muted-foreground"
+                  onClick={() => navigate("/forgot-password")}
+                >
+                  Forgot Password?
+                </Button>
+              </div>
+
               <div className="mt-4 text-center text-sm text-muted-foreground">
                 <p>Demo Accounts:</p>
                 <p>admin@example.com / admin123</p>

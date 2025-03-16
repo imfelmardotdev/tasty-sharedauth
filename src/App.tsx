@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Home from "./components/home";
 import SignIn from "./components/auth/SignIn";
+import ForgotPassword from "./components/auth/ForgotPassword";
 import AuthGuard from "./components/auth/AuthGuard";
 import TeamAccess from "./components/team/TeamAccess";
 import ModelsPage from "./components/models/ModelsPage";
@@ -40,6 +41,7 @@ function AppContent() {
            
             <Routes>
               <Route path="/signin" element={<SignIn />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route
                 path="/dashboard"
                 element={
