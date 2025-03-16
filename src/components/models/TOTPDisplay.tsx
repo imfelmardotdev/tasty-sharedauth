@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { generateTOTP, getTimeRemaining } from "@/lib/utils/totp";
-import { Progress } from "@/components/ui/progress";
 import { updateModelCode } from "@/lib/db/queries";
 import { Copy } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
@@ -104,23 +103,19 @@ const TOTPDisplay = ({ secret, modelId }: TOTPDisplayProps) => {
   }
 
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center gap-2">
-        <div className={`font-mono text-xl sm:text-4xl tracking-[0.25em] sm:tracking-[0.5em] text-primary font-semibold break-all sm:break-normal ${updateError ? 'text-yellow-500' : ''}`}>
+    <div>
+      <div className="flex items-center">
+        <div data-model-id={modelId} className={`font-mono text-3xl tracking-[0.25em] text-primary font-bold ${updateError ? 'text-yellow-500' : ''}`}>
           {code}
         </div>
         <Button
-          variant="outline"
+          variant="ghost"
           size="icon"
           onClick={handleCopy}
-          className="shrink-0 h-8 w-8"
+          className="shrink-0 h-8 w-8 ml-2"
         >
           <Copy className="h-4 w-4" />
         </Button>
-      </div>
-      <Progress value={(timeRemaining / 30) * 100} className="h-1.5 bg-gray-100" />
-      <div className="text-xs sm:text-sm text-muted-foreground text-center">
-        Refreshes in {timeRemaining}s
       </div>
     </div>
   );
