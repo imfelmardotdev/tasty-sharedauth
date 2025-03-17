@@ -140,10 +140,6 @@ const SignIn = () => {
               </div>
 
               <div className="mt-4 text-center text-sm text-muted-foreground">
-                <p>Demo Accounts:</p>
-                <p>admin@example.com / admin123</p>
-                <p>manager@example.com / manager123</p>
-                <p>user@example.com / user123</p>
               </div>
             </form>
           </Form>
