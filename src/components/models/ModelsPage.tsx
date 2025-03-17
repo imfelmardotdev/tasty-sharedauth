@@ -419,7 +419,7 @@ const ModelsPage = () => {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Username</TableHead>
-                  <TableHead>Code</TableHead>
+                 
                   <TableHead>2FA Code</TableHead>
                   <TableHead>Link</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -430,16 +430,29 @@ const ModelsPage = () => {
                   <TableRow key={model.id}>
                     <TableCell>{model.name}</TableCell>
                     <TableCell>{model.username}</TableCell>
-                    <TableCell>{model.code}</TableCell>
+                   
                     <TableCell>
-                      {model.totp_secret ? (
-                        <TOTPDisplay 
-                          secret={model.totp_secret}
-                          modelId={model.id}
-                        />
-                      ) : (
-                        <span className="text-gray-400">No 2FA configured</span>
-                      )}
+                      <div className="flex items-center gap-4">
+                        {model.totp_secret ? (
+                          <>
+                            <TOTPDisplay 
+                              secret={model.totp_secret}
+                              modelId={model.id}
+                            />
+                            <div className="relative">
+                              <CircularProgress 
+                                value={(timeRemaining / 30) * 100} 
+                                className="h-8 w-8 text-primary"
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center text-xs font-medium">
+                                {timeRemaining}
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <span className="text-gray-400">No 2FA configured</span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       {model.link && (
