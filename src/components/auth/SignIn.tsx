@@ -55,7 +55,10 @@ const SignIn = () => {
       const user = await getUser(values.email);
 
       if (user) {
-        localStorage.setItem("userRole", user.role);
+        // Ensure role is properly capitalized
+        const validRoles = ["Admin", "Manager", "User"];
+        const normalizedRole = validRoles.find(r => r.toLowerCase() === user.role.toLowerCase()) || "User";
+        localStorage.setItem("userRole", normalizedRole);
         localStorage.setItem("userEmail", user.email);
         localStorage.setItem("userId", user.id);
         navigate("/dashboard");

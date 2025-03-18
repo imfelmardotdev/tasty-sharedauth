@@ -4,7 +4,6 @@ import { supabase } from "@/lib/supabase";
 import { Card } from "@/components/ui/card";
 import TOTPDisplay from "../models/TOTPDisplay";
 import { Model } from "@/lib/db/types";
-import { Timer } from "@/components/group/Timer";
 
 const SharedModelView = () => {
   const [model, setModel] = useState<Model | null>(null);
@@ -128,16 +127,10 @@ const SharedModelView = () => {
               <div>
                 <h3 className="text-sm font-medium text-gray-500">2FA Code</h3>
                 <div className="mt-1">
-                <TOTPDisplay 
-                  secret={model.totp_secret}
-                  modelId={model.id}
-                />
-                <div className="mt-2">
-                  <Timer 
-                    expiresAt={new Date().toISOString()} // Using current time as we refresh every 30s
-                    codeId={model.id}
+                  <TOTPDisplay 
+                    secret={model.totp_secret}
+                    modelId={model.id}
                   />
-                </div>
                 </div>
               </div>
             )}

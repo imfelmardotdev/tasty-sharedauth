@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { User, Group, Code, Model } from "@/lib/db/types";
+import { type Role } from "@/lib/utils/roles";
 import { getGroups, getModels } from "@/lib/db/queries";
 
 interface DatabaseContextType {
@@ -30,13 +31,17 @@ const DatabaseProvider = ({
   const refreshData = async () => {
     try {
       setLoading(true);
-      const [groupsData, modelsData] = await Promise.all([
-        getGroups(),
-        getModels()
-      ]);
-
+      const currentRole = localStorage.getItem("userRole") as Role;
+      const groupsData = await getGroups();
       setGroups(groupsData);
-      setModels(modelsData);
+
+      // Only fetch models for admin and manager users
+      if (currentRole !== "User") {
+        const modelsData = await getModels();
+        setModels(modelsData);
+      } else {
+        setModels([]);
+      }
 
       // Extract codes from groups
       const allCodes = groupsData.flatMap((g) => g.codes || []);

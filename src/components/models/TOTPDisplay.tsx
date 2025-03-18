@@ -103,7 +103,7 @@ const TOTPDisplay = ({ secret, modelId }: TOTPDisplayProps) => {
   }
 
   return (
-    <div>
+    <div className="space-y-4">
       <div className="flex items-center">
         <div data-model-id={modelId} className={`font-mono text-3xl tracking-[0.25em] text-primary font-bold ${updateError ? 'text-yellow-500' : ''}`}>
           {code}

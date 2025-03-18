@@ -101,16 +101,19 @@ const Home = ({ initialRole = "User" }: HomeProps) => {
           .from("users")
           .select("*", { count: "exact", head: true });
 
-        // Get total shared links (both group and model links)
-        const { count: groupLinksCount } = await supabase
-          .from("shared_links")
-          .select("*", { count: "exact", head: true });
+        // Get total shared links only for admin users
+        let totalSharedLinks = 0;
+        if (currentRole === "Admin") {
+          const { count: groupLinksCount } = await supabase
+            .from("shared_links")
+            .select("*", { count: "exact", head: true });
 
-        const { count: modelLinksCount } = await supabase
-          .from("shared_model_links")
-          .select("*", { count: "exact", head: true });
+          const { count: modelLinksCount } = await supabase
+            .from("shared_model_links")
+            .select("*", { count: "exact", head: true });
 
-        const totalSharedLinks = (groupLinksCount || 0) + (modelLinksCount || 0);
+          totalSharedLinks = (groupLinksCount || 0) + (modelLinksCount || 0);
+        }
 
         // Calculate total codes from group_codes
         const totalCodes = groups.reduce(
@@ -266,13 +269,15 @@ const Home = ({ initialRole = "User" }: HomeProps) => {
                 onClick={() => navigate('/team')}
               />
             )}
-            <StatsCard
-              title="Extensions"
-              value={models.length}
-              icon={PuzzleIcon}
-              description="Extensions are models or accounts that automate 2FA input in Chrome and other browsers"
-              onClick={() => navigate('/models')}
-            />
+            {currentRole !== "User" && (
+              <StatsCard
+                title="Extensions"
+                value={models.length}
+                icon={PuzzleIcon}
+                description="Extensions are models or accounts that automate 2FA input in Chrome and other browsers"
+                onClick={() => navigate('/models')}
+              />
+            )}
             {currentRole === "Admin" && (
               <StatsCard
                 title="Shared Links"

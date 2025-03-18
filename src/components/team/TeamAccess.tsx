@@ -65,8 +65,13 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [nameSearchQuery, setNameSearchQuery] = useState("");
   
-  // Get role from localStorage if not provided as prop
-  const role = currentRole || localStorage.getItem("userRole") as Role || "User";
+  // Get role from localStorage if not provided as prop and normalize it
+  const normalizeRole = (role: string | null): Role => {
+    if (!role) return "User";
+    const validRoles = ["Admin", "Manager", "User"];
+    return (validRoles.find(r => r.toLowerCase() === role.toLowerCase()) || "User") as Role;
+  };
+  const role = normalizeRole(currentRole || localStorage.getItem("userRole"));
   console.log('Current role:', role); // Debug log
 
   const availableGroups = useMemo(() => 

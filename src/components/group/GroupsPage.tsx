@@ -13,7 +13,7 @@ import ShareModal from "../dashboard/ShareModal";
 import { useDatabase } from "@/contexts/DatabaseContext";
 import { createGroup, addUserToGroup, deleteGroup } from "@/lib/db/queries";
 import { supabase } from "@/lib/supabase";
-import { type Role } from "@/lib/utils/roles";
+import { type Role, getPermissions } from "@/lib/utils/roles";
 import { useToast } from "@/components/ui/use-toast";
 import {
   AlertDialog,
@@ -126,14 +126,16 @@ const GroupsPage = () => {
         <div className="p-6 space-y-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-semibold">Groups</h2>
-            <Button
-              variant="default"
-              onClick={() => setIsAddGroupModalOpen(true)}
-              className="hidden md:flex items-center gap-2"
-            >
-              <FolderPlus className="w-4 h-4" />
-              New Group
-            </Button>
+            {getPermissions(currentRole).canCreateGroups && (
+              <Button
+                variant="default"
+                onClick={() => setIsAddGroupModalOpen(true)}
+                className="hidden md:flex items-center gap-2"
+              >
+                <FolderPlus className="w-4 h-4" />
+                New Group
+              </Button>
+            )}
           </div>
 
           <div className="mb-4">
@@ -272,15 +274,17 @@ const GroupsPage = () => {
         />
 
         <FloatingActionBar className="md:hidden">
-          <Button
-            variant="default"
-            size="sm"
-            className="flex-1"
-            onClick={() => setIsAddGroupModalOpen(true)}
-          >
-            <FolderPlus className="w-4 h-4 mr-1" />
-            New Group
-          </Button>
+          {getPermissions(currentRole).canCreateGroups && (
+            <Button
+              variant="default"
+              size="sm"
+              className="flex-1"
+              onClick={() => setIsAddGroupModalOpen(true)}
+            >
+              <FolderPlus className="w-4 h-4 mr-1" />
+              New Group
+            </Button>
+          )}
         </FloatingActionBar>
 
         <AlertDialog 
