@@ -13,7 +13,7 @@ module.exports = {
   prefix: "",
   theme: {
     fontFamily: {
-      orbitron: ['Orbitron', 'sans-serif'],
+      ppneuemontreal: ['PP Neue Montreal', 'sans-serif'],
       helvetica: ['Helvetica', 'Arial', 'sans-serif'],
       inter: ['Inter', 'sans-serif'],
     },

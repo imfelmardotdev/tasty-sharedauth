@@ -7,7 +7,7 @@ import GroupTOTPDisplay from "../group/GroupTOTPDisplay";
 import { Timer } from "@/components/group/Timer";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { generateTOTP } from "@/lib/utils/totp";
+import { generateTOTP, getTimeRemaining } from "@/lib/utils/totp";
 import { useToast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -19,10 +19,11 @@ interface SharedGroupTOTPDisplayProps {
 const SharedGroupTOTPDisplay = ({ secret, codeId }: SharedGroupTOTPDisplayProps) => {
   const [copied, setCopied] = useState(false);
   const [code, setCode] = useState("");
+  const [timeLeft, setTimeLeft] = useState(30);
 
   useEffect(() => {
     let mounted = true;
-    let interval: NodeJS.Timeout;
+    let timerInterval: NodeJS.Timeout;
 
     const updateCode = async () => {
       if (!mounted) return;
@@ -36,15 +37,28 @@ const SharedGroupTOTPDisplay = ({ secret, codeId }: SharedGroupTOTPDisplayProps)
       }
     };
 
-    // Initial update
+    const updateTimer = () => {
+      if (!mounted) return;
+      const remaining = getTimeRemaining();
+      setTimeLeft(remaining);
+
+      // Update code when timer reaches 30 or 0
+      if (remaining === 30 || remaining === 0) {
+        console.log(`Timer reached ${remaining}, updating code`);
+        updateCode();
+      }
+    };
+
+    // Initial updates
+    updateTimer();
     updateCode();
 
-    // Set up interval for updates
-    interval = setInterval(updateCode, 30000);
+    // Set up interval for timer updates
+    timerInterval = setInterval(updateTimer, 1000);
 
     return () => {
       mounted = false;
-      if (interval) clearInterval(interval);
+      if (timerInterval) clearInterval(timerInterval);
     };
   }, [secret]);
 
@@ -76,7 +90,7 @@ const SharedGroupTOTPDisplay = ({ secret, codeId }: SharedGroupTOTPDisplayProps)
         {code}
       </div>
       <Timer
-        expiresAt={new Date().toISOString()}
+        expiresAt={new Date(Date.now() + timeLeft * 1000).toISOString()}
         codeId={codeId}
         showRefreshText={false}
       />

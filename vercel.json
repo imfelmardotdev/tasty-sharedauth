@@ -11,6 +11,10 @@
       "dest": "/assets/$1"
     },
     {
+      "src": "^/(.+\\.(svg|ico|png|jpg|jpeg|gif))$",
+      "dest": "/public/$1"
+    },
+    {
       "src": ".*",
       "dest": "/index.html"
     }

@@ -8,7 +8,7 @@ type ThemeColor =
   | "yellow"
   | "slate";
 type ThemeMode = "light" | "dark";
-type ThemeFont = "orbitron" | "helvetica" | "arial";
+type ThemeFont = "ppneuemontreal" | "helvetica" | "inter";
 
 interface ThemeContextType {
   mode: ThemeMode;
@@ -34,7 +34,7 @@ const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
   const [font, setFontState] = useState<ThemeFont>(() => {
     const savedFont = localStorage.getItem("themeFont") as ThemeFont;
-    return savedFont || "helvetica";
+    return savedFont || "ppneuemontreal";
   });
 
   useEffect(() => {
@@ -67,7 +67,7 @@ const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const root = window.document.documentElement;
     // Remove all font classes first
-    root.classList.remove("font-orbitron", "font-helvetica", "font-arial");
+    root.classList.remove("font-ppneuemontreal", "font-helvetica", "font-inter");
     // Add new font class
     root.classList.add(`font-${font}`);
     localStorage.setItem("themeFont", font);

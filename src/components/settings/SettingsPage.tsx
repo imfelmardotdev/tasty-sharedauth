@@ -17,7 +17,7 @@ const themes = [
 ];
 
 const fonts = [
-  { value: "orbitron", label: "Orbitron", className: "font-orbitron" },
+  { value: "ppneuemontreal", label: "PP Neue Montreal", className: "font-ppneuemontreal" },
   { value: "helvetica", label: "Helvetica", className: "font-helvetica" },
   { value: "inter", label: "Inter", className: "font-inter" },
 ];
@@ -143,9 +143,9 @@ const SettingsPage = () => {
                         <span className={`text-sm ${fontOption.className}`}>
                           {fontOption.label}
                         </span>
-                        {(fontOption.value === "helvetica" || font === fontOption.value) && (
+                        {(fontOption.value === "ppneuemontreal" || font === fontOption.value) && (
                           <span className="text-xs text-muted-foreground">
-                            {fontOption.value === "helvetica" && "Default"}
+                            {fontOption.value === "ppneuemontreal" && "Default"}
                             {font === fontOption.value && "Current"}
                           </span>
                         )}

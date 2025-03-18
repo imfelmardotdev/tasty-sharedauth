@@ -101,10 +101,16 @@ const Home = ({ initialRole = "User" }: HomeProps) => {
           .from("users")
           .select("*", { count: "exact", head: true });
 
-        // Get total shared links
-        const { count: sharedLinksCount } = await supabase
+        // Get total shared links (both group and model links)
+        const { count: groupLinksCount } = await supabase
           .from("shared_links")
           .select("*", { count: "exact", head: true });
+
+        const { count: modelLinksCount } = await supabase
+          .from("shared_model_links")
+          .select("*", { count: "exact", head: true });
+
+        const totalSharedLinks = (groupLinksCount || 0) + (modelLinksCount || 0);
 
         // Calculate total codes from group_codes
         const totalCodes = groups.reduce(
@@ -116,7 +122,7 @@ const Home = ({ initialRole = "User" }: HomeProps) => {
           totalGroups: groups.length,
           totalCodes,
           totalMembers: membersCount || 0,
-          totalSharedLinks: sharedLinksCount || 0,
+          totalSharedLinks: totalSharedLinks,
         });
       } catch (err) {
         console.error("Error fetching stats:", err);

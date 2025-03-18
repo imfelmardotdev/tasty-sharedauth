@@ -24,14 +24,12 @@ export const Timer: React.FC<TimerProps> = ({
   const [code, setCode] = useState<string>("");
 
   useEffect(() => {
-    if (!codeId) return;
-
     let isActive = true;
     let timerInterval: NodeJS.Timeout;
     let forceUpdateInterval: NodeJS.Timeout;
 
     const updateCode = async () => {
-      if (!isActive) return;
+      if (!isActive || !codeId) return;
 
       try {
         console.log("Updating code...");
@@ -56,7 +54,12 @@ export const Timer: React.FC<TimerProps> = ({
 
     const updateTimer = () => {
       if (!isActive) return;
-      const remaining = getTimeRemaining();
+
+      // Calculate time remaining based on expiresAt prop
+      const now = new Date();
+      const expiry = new Date(expiresAt);
+      const remaining = Math.max(0, Math.round((expiry.getTime() - now.getTime()) / 1000));
+      
       setTimeLeft(remaining);
       setIsNearExpiry(remaining <= 5);
 
@@ -70,21 +73,23 @@ export const Timer: React.FC<TimerProps> = ({
     // Initial updates
     updateTimer();
     
-    // Force an update every 30 seconds regardless of timer state
-    forceUpdateInterval = setInterval(() => {
-      if (!isActive) return;
-      updateCode();
-    }, 30000);
+    if (codeId) {
+      // Force an update every 30 seconds regardless of timer state
+      forceUpdateInterval = setInterval(() => {
+        if (!isActive) return;
+        updateCode();
+      }, 30000);
+    }
 
     // Set up interval for timer updates
     timerInterval = setInterval(updateTimer, 1000);
     
     return () => {
       isActive = false;
-      clearInterval(timerInterval);
-      clearInterval(forceUpdateInterval);
+      if (timerInterval) clearInterval(timerInterval);
+      if (forceUpdateInterval) clearInterval(forceUpdateInterval);
     };
-  }, [codeId]);
+  }, [codeId, expiresAt]);
 
 
   const formatTime = (seconds: number) => {
