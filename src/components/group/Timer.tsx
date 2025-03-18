@@ -9,9 +9,15 @@ interface TimerProps {
   expiresAt: string;
   codeId?: string;
   groupId?: string;
+  showRefreshText?: boolean;
 }
 
-export const Timer: React.FC<TimerProps> = ({ expiresAt, codeId, groupId }) => {
+export const Timer: React.FC<TimerProps> = ({ 
+  expiresAt, 
+  codeId, 
+  groupId,
+  showRefreshText = true // Default to true for backward compatibility
+}) => {
   const [timeLeft, setTimeLeft] = useState<number>(30);
   const [isNearExpiry, setIsNearExpiry] = useState(false);
   const [updateError, setUpdateError] = useState(false);
@@ -137,9 +143,11 @@ export const Timer: React.FC<TimerProps> = ({ expiresAt, codeId, groupId }) => {
         )}
       </div>
       <Progress value={(timeLeft / 30) * 100} className="h-1" />
-      <div className="text-xs text-gray-500">
-        Refreshes in {timeLeft}s
-      </div>
+      {showRefreshText && (
+        <div className="text-xs text-gray-500">
+          Refreshes in {timeLeft}s
+        </div>
+      )}
     </div>
   );
 };

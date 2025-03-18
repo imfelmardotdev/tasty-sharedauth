@@ -4,7 +4,15 @@ import { GroupCode } from "@/lib/db/types";
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Users, Copy, Share2, Trash2, QrCode, Plus } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ArrowLeft, Users, Copy, Share2, Trash2, QrCode, Plus, MoreVertical } from "lucide-react";
+import { CircularProgress } from "@/components/ui/circular-progress";
+import { getTimeRemaining } from "@/lib/utils/totp";
 import Header from "../dashboard/Header";
 import Sidebar from "../layout/Sidebar";
 import FloatingActionBar from "@/components/ui/floating-action-bar";
@@ -51,8 +59,19 @@ const GroupManagement = () => {
   const [groupCodes, setGroupCodes] = useState<GroupCode[]>([]);
   const [isAddCodeModalOpen, setIsAddCodeModalOpen] = useState(false);
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState(getTimeRemaining());
 
   const toggleMobileSidebar = () => setIsMobileSidebarOpen(prev => !prev);
+
+  useEffect(() => {
+    // Update the timer every second
+    const timer = setInterval(() => {
+      setTimeRemaining(getTimeRemaining());
+    }, 1000);
+
+    // Cleanup interval on unmount
+    return () => clearInterval(timer);
+  }, []);
 
   const { groups, loading, error, refreshData } = useDatabase();
   const group = groups.find((g) => g.id === id);
@@ -275,7 +294,9 @@ const GroupManagement = () => {
                 <div className="space-y-4">
                   <div>
                     <h4 className="text-sm font-medium text-muted-foreground">Created By</h4>
-                    <p className="text-base">{group.creator_email || group.created_by}</p>
+                    <p className="text-base">
+                      {group.creator_email || "2FA Admin"}
+                    </p>
                   </div>
                   <div>
                     <h4 className="text-sm font-medium text-muted-foreground">Created At</h4>
@@ -298,8 +319,185 @@ const GroupManagement = () => {
           
           <h3 className="text-xl font-semibold mb-4">Authentication Codes</h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {groupCodes.map((code) => (
+          {/* Mobile View */}
+          <div className="block md:hidden space-y-4">
+            {groupCodes.length === 0 ? (
+              <div className="text-center text-muted-foreground py-8">
+                No codes found. Click "Add Code" to create one.
+              </div>
+            ) : (
+              groupCodes.map((code) => (
+                <div key={code.id} className="bg-card rounded-lg p-4 shadow-sm border">
+                  <div className="grid grid-cols-[1fr,auto] gap-4">
+                    <div
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        try {
+                          const codeElement = document.querySelector(
+                            `[data-code-id="${code.id}"] .font-mono`
+                          );
+                          const textToCopy = codeElement ? codeElement.textContent || code.code : code.code;
+                          await navigator.clipboard.writeText(textToCopy);
+                          toast({
+                            title: "Code copied!",
+                            description: "The code has been copied to your clipboard.",
+                          });
+                        } catch (err) {
+                          console.error("Error copying to clipboard:", err);
+                          toast({
+                            title: "Error",
+                            description: "Failed to copy code to clipboard",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                      className="cursor-pointer select-none active:bg-accent/50 hover:bg-accent/25 rounded-lg transition-colors p-4 space-y-2"
+                    >
+                      <h3 className="font-semibold text-xl">{code.name || "Untitled Code"}</h3>
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center">
+                          <span className="text-4xl font-mono tracking-wider">
+                            {code.secret ? (
+                              <GroupTOTPDisplay secret={code.secret} codeId={code.id} />
+                            ) : (
+                              code.code
+                            )}
+                          </span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              const codeElement = document.querySelector(
+                                `[data-code-id="${code.id}"] .font-mono`
+                              );
+                              const textToCopy = codeElement ? codeElement.textContent || code.code : code.code;
+                              await navigator.clipboard.writeText(textToCopy);
+                              toast({
+                                title: "Code copied!",
+                                description: "The code has been copied to your clipboard.",
+                              });
+                            } catch (err) {
+                              console.error("Error copying to clipboard:", err);
+                              toast({
+                                title: "Error",
+                                description: "Failed to copy code to clipboard",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {code.notes || "No notes added"}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col items-center justify-start gap-2 py-4">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="h-5 w-5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={async () => {
+                              try {
+                                const codeElement = document.querySelector(
+                                  `[data-code-id="${code.id}"] .font-mono`
+                                );
+                                const textToCopy = codeElement ? codeElement.textContent || code.code : code.code;
+                                await navigator.clipboard.writeText(textToCopy);
+                                toast({
+                                  title: "Code copied!",
+                                  description: "The code has been copied to your clipboard.",
+                                });
+                              } catch (err) {
+                                console.error("Error copying to clipboard:", err);
+                                toast({
+                                  title: "Error",
+                                  description: "Failed to copy code to clipboard",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                          >
+                            <Copy className="h-4 w-4 mr-2" />
+                            Copy
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSharedDetails({
+                                id: group.id,
+                                title: `${group.title} - ${code.name || 'Code'}`,
+                              });
+                              setIsShareModalOpen(true);
+                            }}
+                          >
+                            <Share2 className="h-4 w-4 mr-2" />
+                            Share
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-red-600"
+                            onClick={async () => {
+                              try {
+                                await deleteGroupCode(code.id);
+                                await fetchGroupCodes();
+                                toast({
+                                  title: "Success",
+                                  description: "Code deleted successfully",
+                                });
+                              } catch (err) {
+                                console.error("Error deleting code:", err);
+                                toast({
+                                  title: "Error",
+                                  description: "Failed to delete code",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
+                      {code.secret && (
+                        <div className="relative">
+                          <div className="relative">
+                            <CircularProgress
+                              value={(timeRemaining / 30) * 100} 
+                              className="h-8 w-8 text-primary"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="text-xs font-medium">
+                                {timeRemaining}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop View */}
+          <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {groupCodes.length === 0 ? (
+              <div className="col-span-full text-center text-muted-foreground py-8">
+                No codes found. Click "Add Code" to create one.
+              </div>
+            ) : groupCodes.map((code) => (
               <Card
                 key={code.id}
                 className="bg-card/50 backdrop-blur-sm border border-border/50 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden group h-[280px] sm:h-[320px]"
@@ -323,6 +521,21 @@ const GroupManagement = () => {
                         )}
                       </div>
                     </div>
+                    {code.secret && (
+                      <div className="relative">
+                        <div className="relative">
+                          <CircularProgress
+                            value={(timeRemaining / 30) * 100} 
+                            className="h-8 w-8 text-primary"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-xs font-medium">
+                              {timeRemaining}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardHeader>
 
@@ -336,22 +549,15 @@ const GroupManagement = () => {
                           <div className="text-2xl sm:text-4xl font-mono tracking-[0.25em] sm:tracking-[0.5em] text-primary font-bold break-all sm:break-normal">
                             {code.code}
                           </div>
-                          {code.expires_at && (
-                            <div className="mt-2">
-                              <Timer expiresAt={code.expires_at} codeId={code.id} />
-                            </div>
-                          )}
                         </div>
                       )}
                     </div>
                     
-                    {code.notes && (
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm text-muted-foreground text-center line-clamp-2">
-                          {code.notes}
-                        </p>
-                      </div>
-                    )}
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-muted-foreground text-center line-clamp-2">
+                        {code.notes || "No notes added"}
+                      </p>
+                    </div>
                   </div>
                 </CardContent>
 
@@ -443,12 +649,6 @@ const GroupManagement = () => {
                 </CardFooter>
               </Card>
             ))}
-
-            {groupCodes.length === 0 && (
-              <div className="col-span-full text-center text-muted-foreground py-8">
-                No codes found. Click "Add Code" to create one.
-              </div>
-            )}
           </div>
         </div>
 

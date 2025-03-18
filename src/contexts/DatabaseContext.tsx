@@ -73,6 +73,18 @@ const DatabaseProvider = ({
             await refreshData();
           },
         )
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "user_groups",
+          },
+          async (payload) => {
+            console.log("User group change detected:", payload);
+            await refreshData();
+          },
+        )
         .subscribe((status) => {
           console.log("Realtime subscription status:", status);
           if (status === "SUBSCRIBED") {

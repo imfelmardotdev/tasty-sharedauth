@@ -197,22 +197,37 @@ export const getGroups = async () => {
 
               // Get creator's email
           let creator;
-          const { data: creatorData, error: creatorError } = await supabase
-            .from("users")
-            .select("email")
-            .eq("id", group.created_by)
-            .single();
-
-          creator = creatorData;
-          
-          // Try with admin client if permission denied
-          if (creatorError && creatorError.message.includes('permission denied') && supabaseAdmin) {
-            const { data: adminCreator } = await supabaseAdmin
+          try {
+            // First try with supabase client
+            const { data: creatorData, error: creatorError } = await supabase
               .from("users")
               .select("email")
               .eq("id", group.created_by)
               .single();
-            creator = adminCreator;
+
+            if (creatorError) {
+              if (creatorError.message.includes('permission denied') && supabaseAdmin) {
+                // Try with admin client if permission denied
+                const { data: adminCreator, error: adminError } = await supabaseAdmin
+                  .from("users")
+                  .select("email")
+                  .eq("id", group.created_by)
+                  .single();
+
+                if (adminError) {
+                  console.error("Admin fetch failed:", adminError);
+                  throw adminError;
+                }
+                creator = adminCreator;
+              } else {
+                throw creatorError;
+              }
+            } else {
+              creator = creatorData;
+            }
+          } catch (error) {
+            console.error("Error fetching creator email:", error);
+            creator = { email: null }; // This will trigger the fallback to "2FA Admin"
           }
             
           return {
@@ -265,22 +280,37 @@ export const getGroups = async () => {
 
           // Get creator's email
           let creator;
-          const { data: creatorData, error: creatorError } = await supabase
-            .from("users")
-            .select("email")
-            .eq("id", group.created_by)
-            .single();
-
-          creator = creatorData;
-          
-          // Try with admin client if permission denied
-          if (creatorError && creatorError.message.includes('permission denied') && supabaseAdmin) {
-            const { data: adminCreator } = await supabaseAdmin
+          try {
+            // First try with supabase client
+            const { data: creatorData, error: creatorError } = await supabase
               .from("users")
               .select("email")
               .eq("id", group.created_by)
               .single();
-            creator = adminCreator;
+
+            if (creatorError) {
+              if (creatorError.message.includes('permission denied') && supabaseAdmin) {
+                // Try with admin client if permission denied
+                const { data: adminCreator, error: adminError } = await supabaseAdmin
+                  .from("users")
+                  .select("email")
+                  .eq("id", group.created_by)
+                  .single();
+
+                if (adminError) {
+                  console.error("Admin fetch failed:", adminError);
+                  throw adminError;
+                }
+                creator = adminCreator;
+              } else {
+                throw creatorError;
+              }
+            } else {
+              creator = creatorData;
+            }
+          } catch (error) {
+            console.error("Error fetching creator email:", error);
+            creator = { email: null }; // This will trigger the fallback to "2FA Admin"
           }
 
           return {
