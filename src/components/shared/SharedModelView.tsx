@@ -3,15 +3,28 @@ import { useLocation, useParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { Card } from "@/components/ui/card";
 import TOTPDisplay from "../models/TOTPDisplay";
+import { CircularProgress } from "@/components/ui/circular-progress";
+import { getTimeRemaining } from "@/lib/utils/totp";
 import { Model } from "@/lib/db/types";
 
 const SharedModelView = () => {
   const [model, setModel] = useState<Model | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [timeRemaining, setTimeRemaining] = useState(getTimeRemaining());
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const token = new URLSearchParams(location.search).get("token");
+
+  useEffect(() => {
+    // Update the timer every second
+    const timer = setInterval(() => {
+      setTimeRemaining(getTimeRemaining());
+    }, 1000);
+
+    // Cleanup interval on unmount
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const validateAndFetchModel = async () => {
@@ -126,11 +139,20 @@ const SharedModelView = () => {
             {model.totp_secret && (
               <div>
                 <h3 className="text-sm font-medium text-gray-500">2FA Code</h3>
-                <div className="mt-1">
+                <div className="mt-1 flex items-center gap-4">
                   <TOTPDisplay 
                     secret={model.totp_secret}
                     modelId={model.id}
                   />
+                  <div className="relative">
+                    <CircularProgress 
+                      value={(timeRemaining / 30) * 100} 
+                      className="h-8 w-8 text-primary"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center text-xs font-medium">
+                      {timeRemaining}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
