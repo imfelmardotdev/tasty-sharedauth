@@ -334,12 +334,12 @@ const TeamAccess = ({ currentRole = "User" }: { currentRole?: Role | null }) => 
               </Button>
             </div>
             <div className="flex gap-2 items-center w-full sm:w-auto">
-              <div className="flex-1 sm:w-[200px]">
+              <div className="w-full sm:w-[200px]">
                 <div className="relative">
                   <Input
                     placeholder="Search by name..."
                     onChange={handleSearchChange}
-                    className="flex-1 sm:w-[200px]"
+                    className="w-full"
                     value={nameSearchQuery}
                   />
                   {nameSearchQuery && (

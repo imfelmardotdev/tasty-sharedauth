@@ -292,24 +292,28 @@ const ModelsPage = () => {
 
       <main className="flex-1 md:ml-64 ml-0 pt-16 px-2 sm:px-4 container mx-auto max-w-7xl bg-background min-h-screen">
         <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
-            <div className="hidden lg:flex justify-between items-center w-full">
-              <h2 className="text-2xl font-semibold">Codes</h2>
-              <Button
-                variant="default"
-                onClick={() => setIsAddModalOpen(true)}
-                className="hidden md:flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Add Code
-              </Button>
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div className="flex justify-between items-center w-full">
+                <h2 className="text-2xl font-semibold">Codes</h2>
+                <Button
+                  variant="default"
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="hidden md:flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Code
+                </Button>
+              </div>
             </div>
-            <div className="hidden lg:block w-[300px]">
+
+            <div className="w-full max-w-md mx-auto sm:mx-0">
               <div className="relative">
                 <Input
                   placeholder="Search codes..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full"
                 />
                 {searchQuery && (
                   <Button
