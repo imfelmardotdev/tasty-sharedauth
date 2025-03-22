@@ -45,13 +45,41 @@ const AuthCallback = () => {
     message: string;
   } | null>(null);
 
-  // Get all possible auth parameters
-  const token = searchParams.get("token_hash") || searchParams.get("token");
+  // Process auth parameters
+  const rawToken = searchParams.get("token_hash") || searchParams.get("token");
   const code = searchParams.get("code");
   const type = searchParams.get("type");
+  const error = searchParams.get("error");
+  const errorDescription = searchParams.get("error_description");
   
-  // Log params for debugging
-  console.log('Auth params:', { type, token, code });
+  // Process token based on auth type
+  const token = rawToken && (type === "recovery" 
+    ? rawToken 
+    : rawToken.replace(/-/g, "+").replace(/_/g, "/")
+  );
+  
+  // Debug logging
+  console.log('Auth callback params:', {
+    type,
+    hasToken: !!token,
+    hasCode: !!code,
+    rawToken,
+    processedToken: token,
+    error,
+    errorDescription,
+    allParams: Object.fromEntries(searchParams.entries())
+  });
+
+  // Handle URL error params in useEffect
+  useEffect(() => {
+    if (error || errorDescription) {
+      console.error("Auth error from URL params:", { error, errorDescription });
+      setStatus({
+        type: "error",
+        message: errorDescription || "Authentication failed"
+      });
+    }
+  }, [error, errorDescription]);
 
   const form = useForm<z.infer<typeof passwordSchema>>({
     resolver: zodResolver(passwordSchema),
@@ -68,34 +96,54 @@ const AuthCallback = () => {
 
       try {
         setIsLoading(true);
+        console.log('Processing auth callback:', { type, token, code });
 
-        // Handle PKCE flow
-        if (code) {
-          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-          if (exchangeError) throw exchangeError;
+        switch (type) {
+          case "recovery": {
+            // For recovery type, verify session then show form
+            console.log("Recovery flow detected");
+            
+            // Verify the recovery session if code exists
+            if (code) {
+              const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
+              if (sessionError) {
+                console.error("Session exchange error:", sessionError);
+                throw sessionError;
+              }
+              console.log("Recovery session established");
+            }
+
+            setStatus({
+              type: "success",
+              message: "Please set your new password below",
+            });
+            break;
+          }
+          
+          case "email": {
+            if (!token) throw new Error("No token for email verification");
+            
+            // For email verification
+            console.log("Email verification flow detected");
+            const { error } = await supabase.auth.verifyOtp({
+              token_hash: token,
+              type: "email"
+            });
+
+            if (error) throw error;
+
+            setStatus({
+              type: "success",
+              message: "Email verified successfully! You can now sign in.",
+            });
+            setTimeout(() => navigate("/signin"), 2000);
+            break;
+          }
+
+          default:
+            console.error("Unsupported auth type:", type);
+            throw new Error(`Unsupported auth type: ${type}`);
         }
-        
-        if (type === "recovery") {
-          setStatus({
-            type: "success",
-            message: "Please set your new password below",
-          });
-          return;
-        }
-
-        // Only verify OTP for email verification, not password reset
-        const { error } = await supabase.auth.verifyOtp({
-          token_hash: token!,
-          type: "email"
-        });
-
-        if (error) throw error;
-
-        setStatus({
-          type: "success",
-          message: "Email verified successfully! You can now sign in.",
-        });
-        setTimeout(() => navigate("/signin"), 2000);
       } catch (error: any) {
         console.error("Verification error:", error);
         setStatus({
@@ -114,32 +162,41 @@ const AuthCallback = () => {
   }, [token, code, type, navigate, status]);
 
   const onSubmit = async (values: z.infer<typeof passwordSchema>) => {
-    if (!token || type !== "recovery") return;
+    if (type !== "recovery") {
+      console.error("Invalid auth type for password reset:", { type });
+      return;
+    }
 
     try {
       setIsLoading(true);
+      console.log("Starting password update...");
       
-      // First exchange the code for a session if it exists
-      if (code) {
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        if (exchangeError) throw exchangeError;
-      }
-      
-      // Then update the password
-      const { error } = await supabase.auth.updateUser({ 
+      // PKCE flow - we're logged in at this point, just update the password
+      const { data, error } = await supabase.auth.updateUser({ 
         password: values.password
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Password update failed:", error);
+        throw error;
+      }
 
+      // Show success message and redirect
+      const successMessage = "Password updated successfully. Please sign in with your new password.";
+      console.log(successMessage);
+      
       toast({
         title: "Success",
-        description: "Password updated successfully. Please sign in with your new password.",
+        description: successMessage,
       });
 
-      setTimeout(() => navigate("/signin"), 2000);
+      // Wait a moment before redirecting to let user see the success message
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      navigate("/signin", { replace: true });
+      
     } catch (error: any) {
-      console.error("Password update error:", error);
+      const errorMessage = error.message || "Failed to update password";
+      console.error("Password reset error:", { error, message: errorMessage });
       toast({
         variant: "destructive",
         title: "Error",
