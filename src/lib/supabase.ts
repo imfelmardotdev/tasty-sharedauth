@@ -19,8 +19,8 @@ export const supabase = createClient(
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      storage: window.localStorage, // Explicitly use window.localStorage
-      detectSessionInUrl: true,
+      storage: window.localStorage,
+      detectSessionInUrl: false, // Disable automatic session handling for custom flows
       flowType: 'pkce',
     },
   },

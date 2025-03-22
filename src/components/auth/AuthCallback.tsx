@@ -45,12 +45,13 @@ const AuthCallback = () => {
     message: string;
   } | null>(null);
 
+  // Get all possible auth parameters
   const token = searchParams.get("token_hash") || searchParams.get("token");
+  const code = searchParams.get("code");
   const type = searchParams.get("type");
   
-  // Log token info for debugging
-  console.log('Token type:', type);
-  console.log('Token:', token);
+  // Log params for debugging
+  console.log('Auth params:', { type, token, code });
 
   const form = useForm<z.infer<typeof passwordSchema>>({
     resolver: zodResolver(passwordSchema),
@@ -62,11 +63,17 @@ const AuthCallback = () => {
   });
 
   useEffect(() => {
-    const handleToken = async () => {
-      if (!token) return;
+    const handleAuth = async () => {
+      if (!token && !code) return;
 
       try {
         setIsLoading(true);
+
+        // Handle PKCE flow
+        if (code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (exchangeError) throw exchangeError;
+        }
         
         if (type === "recovery") {
           setStatus({
@@ -78,7 +85,7 @@ const AuthCallback = () => {
 
         // Only verify OTP for email verification, not password reset
         const { error } = await supabase.auth.verifyOtp({
-          token_hash: token,
+          token_hash: token!,
           type: "email"
         });
 
@@ -100,14 +107,25 @@ const AuthCallback = () => {
       }
     };
 
-    handleToken();
-  }, [token, type, navigate]);
+    // Only run if we're not already showing the password form
+    if (!status) {
+      handleAuth();
+    }
+  }, [token, code, type, navigate, status]);
 
   const onSubmit = async (values: z.infer<typeof passwordSchema>) => {
     if (!token || type !== "recovery") return;
 
     try {
       setIsLoading(true);
+      
+      // First exchange the code for a session if it exists
+      if (code) {
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        if (exchangeError) throw exchangeError;
+      }
+      
+      // Then update the password
       const { error } = await supabase.auth.updateUser({ 
         password: values.password
       });
