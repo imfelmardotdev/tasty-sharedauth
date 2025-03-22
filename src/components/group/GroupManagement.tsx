@@ -470,17 +470,15 @@ const GroupManagement = () => {
                       </DropdownMenu>
 
                       {code.secret && (
-                        <div className="relative">
-                          <div className="relative">
-                            <CircularProgress
-                              value={(timeRemaining / 30) * 100} 
-                              className="h-8 w-8 text-primary"
-                            />
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <span className="text-xs font-medium">
-                                {timeRemaining}
-                              </span>
-                            </div>
+                        <div className="relative w-12 h-12 flex items-center justify-center">
+                          <CircularProgress
+                            value={(timeRemaining / 30) * 100} 
+                            className="h-12 w-12 text-primary absolute"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-sm font-semibold">
+                              {timeRemaining}
+                            </span>
                           </div>
                         </div>
                       )}
@@ -522,17 +520,15 @@ const GroupManagement = () => {
                       </div>
                     </div>
                     {code.secret && (
-                      <div className="relative">
-                        <div className="relative">
-                          <CircularProgress
-                            value={(timeRemaining / 30) * 100} 
-                            className="h-8 w-8 text-primary"
-                          />
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-xs font-medium">
-                              {timeRemaining}
-                            </span>
-                          </div>
+                      <div className="relative w-12 h-12 flex items-center justify-center shrink-0">
+                        <CircularProgress
+                          value={(timeRemaining / 30) * 100} 
+                          className="h-12 w-12 text-primary absolute"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-sm font-semibold">
+                            {timeRemaining}
+                          </span>
                         </div>
                       </div>
                     )}

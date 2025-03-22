@@ -395,13 +395,13 @@ const ModelsPage = () => {
                         </DropdownMenuContent>
                       </DropdownMenu>
 
-                      <div className="relative">
+                      <div className="relative w-12 h-12 flex items-center justify-center">
                         <CircularProgress 
                           value={(timeRemaining / 30) * 100} 
-                          className="h-8 w-8 text-primary"
+                          className="h-12 w-12 text-primary absolute"
                         />
-                        <div className="absolute inset-0 flex items-center justify-center text-xs font-medium">
-                          {timeRemaining}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-sm font-semibold">{timeRemaining}</span>
                         </div>
                       </div>
                     </div>
@@ -436,20 +436,22 @@ const ModelsPage = () => {
                     <TableCell>{model.username}</TableCell>
                    
                     <TableCell>
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-4 w-[300px]">
                         {model.totp_secret ? (
                           <>
-                            <TOTPDisplay 
-                              secret={model.totp_secret}
-                              modelId={model.id}
-                            />
-                            <div className="relative">
+                            <div className="flex-1">
+                              <TOTPDisplay 
+                                secret={model.totp_secret}
+                                modelId={model.id}
+                              />
+                            </div>
+                            <div className="relative w-12 h-12 flex items-center justify-center shrink-0">
                               <CircularProgress 
                                 value={(timeRemaining / 30) * 100} 
-                                className="h-8 w-8 text-primary"
+                                className="h-12 w-12 text-primary absolute"
                               />
-                              <div className="absolute inset-0 flex items-center justify-center text-xs font-medium">
-                                {timeRemaining}
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <span className="text-sm font-semibold">{timeRemaining}</span>
                               </div>
                             </div>
                           </>
