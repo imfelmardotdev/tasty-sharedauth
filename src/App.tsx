@@ -16,6 +16,8 @@ import SettingsPage from "./components/settings/SettingsPage";
 import SharedLinksPage from "./components/settings/SharedLinksPage";
 import SharedGroupView from "./components/shared/SharedGroupView";
 import SharedModelView from "./components/shared/SharedModelView";
+import TestEmailPage from "./components/testing/TestEmailPage";
+import AuthCallback from "./components/auth/AuthCallback";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { Toaster } from "./components/ui/toaster";
 import LoadingScreen from "./components/LoadingScreen";
@@ -117,6 +119,8 @@ function AppContent() {
               />
               <Route path="/share/group/:groupId" element={<SharedGroupView />} />
               <Route path="/share/model/:id" element={<SharedModelView />} />
+              <Route path="/test-email" element={<TestEmailPage />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
               <Route
                 path="/"
                 element={<Navigate to="/dashboard" replace />}
