@@ -120,6 +120,7 @@ function AppContent() {
               <Route path="/share/group/:groupId" element={<SharedGroupView />} />
               <Route path="/share/model/:id" element={<SharedModelView />} />
               <Route path="/test-email" element={<TestEmailPage />} />
+              <Route path="/auth/v1/verify" element={<AuthCallback />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route
                 path="/"

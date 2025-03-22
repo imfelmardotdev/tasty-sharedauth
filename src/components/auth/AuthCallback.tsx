@@ -63,9 +63,18 @@ const AuthCallback = () => {
 
       try {
         setIsLoading(true);
+        
+        if (type === "recovery") {
+          setStatus({
+            type: "success",
+            message: "Please set your new password below",
+          });
+          return;
+        }
+        
         const { error } = await supabase.auth.verifyOtp({
           token_hash: token,
-          type: type === "recovery" ? "recovery" : "email",
+          type: "email",
         });
 
         if (error) throw error;
