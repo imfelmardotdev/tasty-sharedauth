@@ -45,8 +45,12 @@ const AuthCallback = () => {
     message: string;
   } | null>(null);
 
-  const token = searchParams.get("token");
+  const token = searchParams.get("token_hash") || searchParams.get("token");
   const type = searchParams.get("type");
+  
+  // Log token info for debugging
+  console.log('Token type:', type);
+  console.log('Token:', token);
 
   const form = useForm<z.infer<typeof passwordSchema>>({
     resolver: zodResolver(passwordSchema),
@@ -58,7 +62,7 @@ const AuthCallback = () => {
   });
 
   useEffect(() => {
-    const handleEmailVerification = async () => {
+    const handleToken = async () => {
       if (!token) return;
 
       try {
@@ -71,26 +75,20 @@ const AuthCallback = () => {
           });
           return;
         }
-        
+
+        // Only verify OTP for email verification, not password reset
         const { error } = await supabase.auth.verifyOtp({
           token_hash: token,
-          type: "email",
+          type: "email"
         });
 
         if (error) throw error;
 
-        if (type === "recovery") {
-          setStatus({
-            type: "success",
-            message: "Please set your new password below",
-          });
-        } else {
-          setStatus({
-            type: "success",
-            message: "Email verified successfully! You can now sign in.",
-          });
-          setTimeout(() => navigate("/signin"), 2000);
-        }
+        setStatus({
+          type: "success",
+          message: "Email verified successfully! You can now sign in.",
+        });
+        setTimeout(() => navigate("/signin"), 2000);
       } catch (error: any) {
         console.error("Verification error:", error);
         setStatus({
@@ -102,7 +100,7 @@ const AuthCallback = () => {
       }
     };
 
-    handleEmailVerification();
+    handleToken();
   }, [token, type, navigate]);
 
   const onSubmit = async (values: z.infer<typeof passwordSchema>) => {
@@ -110,7 +108,9 @@ const AuthCallback = () => {
 
     try {
       setIsLoading(true);
-      const { error } = await supabase.auth.updateUser({ password: values.password });
+      const { error } = await supabase.auth.updateUser({ 
+        password: values.password
+      });
 
       if (error) throw error;
 

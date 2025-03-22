@@ -1,6 +1,20 @@
 import { Suspense } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Home from "./components/home";
+
+function RootRedirect() {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const isRecovery = params.get('type') === 'recovery';
+  
+  return (
+    <Navigate
+      to={isRecovery ? `/auth/callback${location.search}` : '/dashboard'}
+      replace
+    />
+  );
+}
+
 import SignIn from "./components/auth/SignIn";
 import ForgotPassword from "./components/auth/ForgotPassword";
 import AuthGuard from "./components/auth/AuthGuard";
@@ -42,8 +56,13 @@ function AppContent() {
           <div className={`min-h-screen pb-16 md:pb-0 bg-background text-foreground antialiased font-${font}`}>
            
             <Routes>
+              {/* Public routes */}
               <Route path="/signin" element={<SignIn />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/auth/v1/verify" element={<AuthCallback />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
+
+              {/* Protected routes */}
               <Route
                 path="/dashboard"
                 element={
@@ -120,11 +139,13 @@ function AppContent() {
               <Route path="/share/group/:groupId" element={<SharedGroupView />} />
               <Route path="/share/model/:id" element={<SharedModelView />} />
               <Route path="/test-email" element={<TestEmailPage />} />
-              <Route path="/auth/v1/verify" element={<AuthCallback />} />
-              <Route path="/auth/callback" element={<AuthCallback />} />
+
+              {/* Root route with recovery token check */}
               <Route
                 path="/"
-                element={<Navigate to="/dashboard" replace />}
+                element={
+                  <RootRedirect />
+                }
               />
             </Routes>
           </div>
