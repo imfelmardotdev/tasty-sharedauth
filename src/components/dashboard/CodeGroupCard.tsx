@@ -14,7 +14,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Copy, Share2, Clock, Users, Settings } from "lucide-react";
+import { Copy, Share2, Clock, Users, Settings, QrCode } from "lucide-react";
+import QRCode from "qrcode";
+import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import Timer from "../group/Timer";
 
@@ -34,6 +36,7 @@ interface CodeGroupCardProps {
   memberCount?: number;
   onCopy?: () => void;
   onShare?: () => void;
+  onBackup?: () => void;
 }
 
 const CodeGroupCard = ({
@@ -46,6 +49,7 @@ const CodeGroupCard = ({
   onShare = () => console.log("Share clicked"),
   currentRole = "User",
 }: CodeGroupCardProps) => {
+  const { toast } = useToast();
   const navigate = useNavigate();
   const [timeRemaining, setTimeRemaining] = React.useState(30);
 
@@ -161,6 +165,53 @@ const CodeGroupCard = ({
               <p>Share code</p>
             </TooltipContent>
           </Tooltip>
+
+          {group_codes[0]?.secret && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={async () => {
+                    try {
+                      const otpauthUrl = `otpauth://totp/${encodeURIComponent(title)}:${encodeURIComponent(group_codes[0].name)}?secret=${group_codes[0].secret}&issuer=${encodeURIComponent(title)}&algorithm=SHA1&digits=6&period=30`;
+                      
+                      // Generate QR code as data URL
+                      const qrDataUrl = await QRCode.toDataURL(otpauthUrl);
+                      
+                      // Create temporary link element
+                      const link = document.createElement('a');
+                      link.href = qrDataUrl;
+                      link.download = `${title}-${group_codes[0].name}-totp-backup.png`;
+                      
+                      // Trigger download
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+
+                      toast({
+                        title: "QR Code downloaded",
+                        description: "Your TOTP backup QR code has been downloaded successfully.",
+                      });
+                    } catch (error) {
+                      console.error('Error generating QR code:', error);
+                      toast({
+                        title: "Error",
+                        description: "Failed to generate QR code backup.",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  className="h-9 w-9 sm:h-8 sm:w-8 opacity-60 hover:opacity-100 transition-opacity hover:bg-primary/10"
+                >
+                  <QrCode className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="font-medium">
+                <p>Backup TOTP</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
         </TooltipProvider>
       </CardFooter>
     </Card>

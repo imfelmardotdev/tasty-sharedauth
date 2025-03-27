@@ -363,6 +363,7 @@ const ModelsPage = () => {
                           <TOTPDisplay 
                             secret={model.totp_secret}
                             modelId={model.id}
+                            modelName={model.name}
                           />
                         </span>
                       </div>
@@ -443,6 +444,7 @@ const ModelsPage = () => {
                               <TOTPDisplay 
                                 secret={model.totp_secret}
                                 modelId={model.id}
+                                modelName={model.name}
                               />
                             </div>
                             <div className="relative w-12 h-12 flex items-center justify-center shrink-0">

@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ArrowLeft, Users, Copy, Share2, Trash2, QrCode, Plus, MoreVertical } from "lucide-react";
+import QRCode from "qrcode";
 import { CircularProgress } from "@/components/ui/circular-progress";
 import { getTimeRemaining } from "@/lib/utils/totp";
 import Header from "../dashboard/Header";
@@ -358,40 +359,86 @@ const GroupManagement = () => {
                         <div className="flex items-center">
                           <span className="text-4xl font-mono tracking-wider">
                             {code.secret ? (
-                              <GroupTOTPDisplay secret={code.secret} codeId={code.id} />
+                              <GroupTOTPDisplay 
+                              secret={code.secret} 
+                              codeId={code.id}
+                              groupName={group.title}
+                              codeName={code.name || "Code"}
+                            />
                             ) : (
                               code.code
                             )}
                           </span>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            try {
-                              const codeElement = document.querySelector(
-                                `[data-code-id="${code.id}"] .font-mono`
-                              );
-                              const textToCopy = codeElement ? codeElement.textContent || code.code : code.code;
-                              await navigator.clipboard.writeText(textToCopy);
-                              toast({
-                                title: "Code copied!",
-                                description: "The code has been copied to your clipboard.",
-                              });
-                            } catch (err) {
-                              console.error("Error copying to clipboard:", err);
-                              toast({
-                                title: "Error",
-                                description: "Failed to copy code to clipboard",
-                                variant: "destructive",
-                              });
-                            }
-                          }}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              try {
+                                const codeElement = document.querySelector(
+                                  `[data-code-id="${code.id}"] .font-mono`
+                                );
+                                const textToCopy = codeElement ? codeElement.textContent || code.code : code.code;
+                                await navigator.clipboard.writeText(textToCopy);
+                                toast({
+                                  title: "Code copied!",
+                                  description: "The code has been copied to your clipboard.",
+                                });
+                              } catch (err) {
+                                console.error("Error copying to clipboard:", err);
+                                toast({
+                                  title: "Error",
+                                  description: "Failed to copy code to clipboard",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                          {code.secret && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={async () => {
+                                try {
+                                  const otpauthUrl = `otpauth://totp/${encodeURIComponent(group.title)}:${encodeURIComponent(code.name || "Code")}?secret=${code.secret}&issuer=${encodeURIComponent(group.title)}&algorithm=SHA1&digits=6&period=30`;
+                                  
+                                  // Generate QR code as data URL
+                                  const qrDataUrl = await QRCode.toDataURL(otpauthUrl);
+                                  
+                                  // Create temporary link element
+                                  const link = document.createElement('a');
+                                  link.href = qrDataUrl;
+                                  link.download = `${group.title}-${code.name || "Code"}-totp-backup.png`;
+                                  
+                                  // Trigger download
+                                  document.body.appendChild(link);
+                                  link.click();
+                                  document.body.removeChild(link);
+
+                                  toast({
+                                    title: "QR Code downloaded",
+                                    description: "Your TOTP backup QR code has been downloaded successfully.",
+                                  });
+                                } catch (error) {
+                                  console.error('Error generating QR code:', error);
+                                  toast({
+                                    title: "Error",
+                                    description: "Failed to generate QR code backup.",
+                                    variant: "destructive",
+                                  });
+                                }
+                              }}
+                            >
+                              <QrCode className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {code.notes || "No notes added"}
@@ -539,7 +586,12 @@ const GroupManagement = () => {
                   <div className="flex flex-col items-center justify-center space-y-4 sm:space-y-6">
                     <div className="w-full p-4 sm:p-6 bg-background/90 backdrop-blur-sm rounded-xl border border-border/50 shadow-inner flex flex-col items-center justify-center gap-4">
                       {code.secret ? (
-                        <GroupTOTPDisplay secret={code.secret} codeId={code.id} />
+                              <GroupTOTPDisplay 
+                                secret={code.secret} 
+                                codeId={code.id}
+                                groupName={group.title}
+                                codeName={code.name || "Code"}
+                              />
                       ) : (
                         <div>
                           <div className="text-2xl sm:text-4xl font-mono tracking-[0.25em] sm:tracking-[0.5em] text-primary font-bold break-all sm:break-normal">
@@ -585,6 +637,54 @@ const GroupManagement = () => {
                         <p>Copy code to clipboard</p>
                       </TooltipContent>
                     </Tooltip>
+
+                    {code.secret && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="flex items-center gap-1.5 hover:bg-primary/10 hover:text-primary transition-colors px-2.5 h-8"
+                            onClick={async () => {
+                              try {
+                                const otpauthUrl = `otpauth://totp/${encodeURIComponent(group.title)}:${encodeURIComponent(code.name || "Code")}?secret=${code.secret}&issuer=${encodeURIComponent(group.title)}&algorithm=SHA1&digits=6&period=30`;
+                                
+                                // Generate QR code as data URL
+                                const qrDataUrl = await QRCode.toDataURL(otpauthUrl);
+                                
+                                // Create temporary link element
+                                const link = document.createElement('a');
+                                link.href = qrDataUrl;
+                                link.download = `${group.title}-${code.name || "Code"}-totp-backup.png`;
+                                
+                                // Trigger download
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+
+                                toast({
+                                  title: "QR Code downloaded",
+                                  description: "Your TOTP backup QR code has been downloaded successfully.",
+                                });
+                              } catch (error) {
+                                console.error('Error generating QR code:', error);
+                                toast({
+                                  title: "Error",
+                                  description: "Failed to generate QR code backup.",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                          >
+                            <QrCode className="h-4 w-4" />
+                            <span className="hidden sm:inline">Backup</span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="font-medium">
+                          <p>Download TOTP backup QR code</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
 
                     <Tooltip>
                       <TooltipTrigger asChild>

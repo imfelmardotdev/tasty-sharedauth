@@ -2,13 +2,25 @@ import React, { useState, useEffect } from "react";
 import { generateTOTP, getTimeRemaining } from "@/lib/utils/totp";
 import { Progress } from "@/components/ui/progress";
 import { updateGroupCodeWithSecret } from "@/lib/db/queries";
+import { Button } from "@/components/ui/button";
+import { QrCode } from "lucide-react";
+import QRCode from "qrcode";
+import { useToast } from "@/components/ui/use-toast";
 
 interface GroupTOTPDisplayProps {
   secret: string | null;
   codeId: string;
+  groupName?: string;
+  codeName?: string;
 }
 
-const GroupTOTPDisplay = ({ secret, codeId }: GroupTOTPDisplayProps) => {
+const GroupTOTPDisplay = ({ 
+  secret, 
+  codeId, 
+  groupName = "Group",
+  codeName = "Code"
+}: GroupTOTPDisplayProps) => {
+  const { toast } = useToast();
   const [code, setCode] = useState<string>("");
   const [updateError, setUpdateError] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(30);
@@ -82,9 +94,42 @@ const GroupTOTPDisplay = ({ secret, codeId }: GroupTOTPDisplayProps) => {
     return null;
   }
 
+  const handleBackup = async () => {
+    if (!secret) return;
+    
+    try {
+      const otpauthUrl = `otpauth://totp/${encodeURIComponent(groupName)}:${encodeURIComponent(codeName)}?secret=${secret}&issuer=${encodeURIComponent(groupName)}&algorithm=SHA1&digits=6&period=30`;
+      
+      // Generate QR code as data URL
+      const qrDataUrl = await QRCode.toDataURL(otpauthUrl);
+      
+      // Create temporary link element
+      const link = document.createElement('a');
+      link.href = qrDataUrl;
+      link.download = `${groupName}-${codeName}-totp-backup.png`;
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: "QR Code downloaded",
+        description: "Your TOTP backup QR code has been downloaded successfully.",
+      });
+    } catch (error) {
+      console.error('Error generating QR code:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate QR code backup.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
-    <div data-code-id={codeId}>
-      <div className={`font-mono text-3xl sm:text-5xl tracking-[0.25em] sm:tracking-[0.5em] text-primary font-bold text-center flex items-center justify-center h-full ${updateError ? 'text-yellow-500' : ''}`}>
+    <div data-code-id={codeId} className="flex flex-col items-center">
+      <div className={`font-mono text-3xl sm:text-5xl tracking-[0.25em] sm:tracking-[0.5em] text-primary font-bold text-center ${updateError ? 'text-yellow-500' : ''}`}>
         {code}
       </div>
     </div>
