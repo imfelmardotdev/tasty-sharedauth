@@ -32,14 +32,22 @@ function RootRedirect() {
   const params = new URLSearchParams(location.search);
   const type = params.get('type');
   const token = params.get('token') || params.get('token_hash');
+  const code = params.get('code');
   
   // Log the redirect parameters
   console.log('RootRedirect:', {
     type,
     hasToken: !!token,
+    hasCode: !!code,
     currentPath: location.pathname,
     searchParams: Object.fromEntries(params.entries())
   });
+
+  // Handle recovery flow with code
+  if (code) {
+    console.log('Detected auth code, redirecting to callback...');
+    return <Navigate to={`/auth/callback${location.search}`} replace />;
+  }
 
   // Handle different token types
   if (type === 'recovery' && token) {
@@ -52,9 +60,15 @@ function RootRedirect() {
     return <Navigate to={`/auth/callback${location.search}`} replace />;
   }
 
-  // Default to dashboard for authenticated users
-  console.log('No auth params, redirecting to dashboard...');
-  return <Navigate to="/dashboard" replace />;
+  // Default to dashboard only if no auth parameters are present
+  if (!type && !token && !code) {
+    console.log('No auth params, redirecting to dashboard...');
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // If we reach here, redirect to auth callback to handle any other auth scenarios
+  console.log('Handling other auth scenario...');
+  return <Navigate to={`/auth/callback${location.search}`} replace />;
 }
 
 function App() {

@@ -56,9 +56,12 @@ const ForgotPassword = () => {
       setIsLoading(true);
       console.log("Initiating password reset for:", values.email);
 
-      // Send password reset email with callback URL
+      // Store original domain for cross-domain handling
+      sessionStorage.setItem('resetPasswordOrigin', window.location.origin);
+
+      // Send password reset email with callback URL and recovery mode
       const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/auth/callback?mode=password_reset&flow=recovery`
       });
 
       if (error) {

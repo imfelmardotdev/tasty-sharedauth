@@ -10,34 +10,40 @@ export const AuthLinkWrapper = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Get URL parameters
-    const params = new URLSearchParams(window.location.hash.substring(1));
-    const hasHashParams = window.location.hash.length > 0;
-    const error = params.get('error');
-    const errorDescription = params.get('error_description');
+    // Get both hash and search parameters
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const searchParams = new URLSearchParams(window.location.search);
+    
+    // Combine parameters from both sources
+    const combinedParams = new URLSearchParams();
+    
+    // Add search parameters first
+    searchParams.forEach((value, key) => {
+      combinedParams.set(key, value);
+    });
+    
+    // Add hash parameters, overwriting search params if same key exists
+    hashParams.forEach((value, key) => {
+      combinedParams.set(key, value);
+    });
 
     // Log the auth link state
     console.log('Auth link state:', {
-      hasHashParams,
-      error,
-      errorDescription,
+      hasHashParams: window.location.hash.length > 0,
+      hasSearchParams: window.location.search.length > 0,
+      error: combinedParams.get('error'),
+      errorDescription: combinedParams.get('error_description'),
       hash: window.location.hash,
-      search: window.location.search
+      search: window.location.search,
+      type: combinedParams.get('type'),
+      code: combinedParams.get('code')
     });
 
-    if (hasHashParams) {
-      // Convert hash parameters to search parameters for Supabase
-      const searchParams = new URLSearchParams(location.search);
-      params.forEach((value, key) => {
-        searchParams.set(key, value);
-      });
-
-      // Navigate to the callback page with search parameters
-      navigate({
-        pathname: '/auth/callback',
-        search: searchParams.toString()
-      }, { replace: true });
-    }
+    // Always redirect to callback with combined parameters
+    navigate({
+      pathname: '/auth/callback',
+      search: combinedParams.toString()
+    }, { replace: true });
   }, [location, navigate]);
 
   return null; // This component doesn't render anything

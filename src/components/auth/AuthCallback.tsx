@@ -49,8 +49,13 @@ const AuthCallback = () => {
   const rawToken = searchParams.get("token_hash") || searchParams.get("token");
   const code = searchParams.get("code");
   const type = searchParams.get("type");
+  const mode = searchParams.get("mode");
+  const flow = searchParams.get("flow");
   const error = searchParams.get("error");
   const errorDescription = searchParams.get("error_description");
+
+  // Get the original domain if it exists
+  const originalDomain = sessionStorage.getItem('resetPasswordOrigin');
   
   // Process token based on auth type
   const token = rawToken && (type === "recovery" 
@@ -92,16 +97,36 @@ const AuthCallback = () => {
 
   useEffect(() => {
     const handleAuth = async () => {
-      if (!token && !code) return;
-
       try {
         setIsLoading(true);
-        console.log('Processing auth callback:', { type, token, code });
+        console.log('Processing auth callback:', { type, token, code, mode, flow });
+
+        // If we have a code, handle it first to establish the session
+        if (code) {
+          console.log('Exchanging code for session...');
+          const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
+          if (sessionError) {
+            console.error("Session exchange error:", sessionError);
+            throw sessionError;
+          }
+          console.log("Session established successfully");
+          
+          // Show the password reset form regardless of type
+          setStatus({
+            type: "success",
+            message: "Please set your new password below",
+          });
+          return;
+        }
+
+        if (!token) {
+          console.log('No token or code found');
+          return;
+        }
 
         switch (type) {
           case "recovery": {
-            // For recovery type, verify session then show form
-            console.log("Recovery flow detected");
+            console.log("Recovery flow detected", { mode, flow });
             
             // Verify the recovery session if code exists
             if (code) {
@@ -113,10 +138,16 @@ const AuthCallback = () => {
               console.log("Recovery session established");
             }
 
-            setStatus({
-              type: "success",
-              message: "Please set your new password below",
-            });
+            // Only show password reset form for recovery flow
+            if (mode === "password_reset" && flow === "recovery") {
+              setStatus({
+                type: "success",
+                message: "Please set your new password below",
+              });
+            } else {
+              // For other recovery scenarios, redirect to dashboard
+              navigate("/dashboard");
+            }
             break;
           }
           
@@ -181,17 +212,16 @@ const AuthCallback = () => {
         throw error;
       }
 
-      // Show success message and redirect
-      const successMessage = "Password updated successfully. Please sign in with your new password.";
-      console.log(successMessage);
-      
+      // Show success message
       toast({
         title: "Success",
-        description: successMessage,
+        description: "Password updated successfully. Please sign in with your new password.",
       });
 
-      // Wait a moment before redirecting to let user see the success message
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Clean up the stored domain
+      sessionStorage.removeItem('resetPasswordOrigin');
+
+      // Redirect to sign in page
       navigate("/signin", { replace: true });
       
     } catch (error: any) {
