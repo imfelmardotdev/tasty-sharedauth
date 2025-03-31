@@ -54,6 +54,7 @@ const AddCodeModal = ({
   onSubmit = () => {},
 }: AddCodeModalProps) => {
   const [scannerActive, setScannerActive] = useState(false);
+  const [hasScannedCode, setHasScannedCode] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
   const [qrScanner, setQrScanner] = useState<QrScanner | null>(null);
@@ -84,8 +85,31 @@ const AddCodeModal = ({
     },
   });
 
+  const handleSuccessfulScan = (secret: string, issuer: string | null, account: string | null) => {
+    if (hasScannedCode) return; // Prevent multiple scans
+    
+    setHasScannedCode(true);
+    form.setValue("secret", secret);
+    handleSecretInput(secret);
+    const name = issuer && account ? `${issuer} (${account})` : issuer || account || "TOTP Code";
+    form.setValue("name", name);
+    stopScanner();
+    
+    toast({
+      title: "QR Code Scanned Successfully",
+      description: "The authentication code has been added.",
+      variant: "default",
+    });
+    
+    // Scroll to form fields after successful scan
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
+
   const startScanner = async () => {
     if (!videoRef.current) return;
+    setHasScannedCode(false); // Reset scan state
 
     try {
       const scanner = new QrScanner(
@@ -97,21 +121,7 @@ const AddCodeModal = ({
           const issuer = params.get("issuer");
           const account = params.get("account");
           if (secret) {
-            form.setValue("secret", secret);
-            handleSecretInput(secret);
-            const name = issuer && account ? `${issuer} (${account})` : issuer || account || "TOTP Code";
-            form.setValue("name", name);
-            stopScanner();
-            toast({
-              title: "QR Code Scanned Successfully",
-              description: "The authentication code has been added.",
-              variant: "default",
-            });
-            
-            // Scroll to form fields after successful scan
-            setTimeout(() => {
-              formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 100);
+            handleSuccessfulScan(secret, issuer, account);
           }
         },
         { returnDetailedScanResult: true },
