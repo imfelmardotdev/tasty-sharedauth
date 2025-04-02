@@ -95,7 +95,7 @@ const SignIn = () => {
                     <FormControl>
                       <Input
                         type="email"
-                        placeholder="Enter your email"
+                        placeholder="Enter your e-mail"
                         {...field}
                       />
                     </FormControl>
