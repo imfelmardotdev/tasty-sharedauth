@@ -20,135 +20,311 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Key, Eye, EyeOff } from "lucide-react";
+import { Key, Eye, EyeOff } from "lucide-react"; // Keep Eye icons if needed for password fields later
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/ui/use-toast";
-import { getUser } from "@/lib/db/queries";
+// Removed getUser import as it's not used in this flow directly
 
+// Schema for the initial email request
 const emailSchema = z.object({
   email: z.string().email("Invalid email address"),
 });
 
-const passwordSchema = z.object({
+// Schema for the code verification and new password step
+const resetSchema = z.object({
+  email: z.string().email(), // Keep email to pass to verifyOtp
+  code: z.string().min(6, "Code must be 6 digits").max(6, "Code must be 6 digits"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string().min(6, "Password must be at least 6 characters"),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match",
-  path: ["confirmPassword"],
+  path: ["confirmPassword"], // Apply error to confirmPassword field
 });
+
+
+type Step = "request" | "verify";
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = React.useState(false);
-  const [showPassword, setShowPassword] = React.useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+  const [step, setStep] = React.useState<Step>("request");
+  const [emailForVerification, setEmailForVerification] = React.useState(""); // Store email for the verify step
 
-  const form = useForm<z.infer<typeof emailSchema>>({
+  // Form for the initial email request
+  const requestForm = useForm<z.infer<typeof emailSchema>>({
     resolver: zodResolver(emailSchema),
     defaultValues: {
       email: "",
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof emailSchema>) => {
+  // Form for the verification and password reset step
+  const resetForm = useForm<z.infer<typeof resetSchema>>({
+    resolver: zodResolver(resetSchema),
+    defaultValues: {
+      email: "", // Will be set when moving to verify step
+      code: "",
+      password: "",
+      confirmPassword: "",
+    },
+  });
+
+  // Handler for requesting the reset code
+  const handleRequestCode = async (values: z.infer<typeof emailSchema>) => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      console.log("Initiating password reset for:", values.email);
-
-      // Store original domain for cross-domain handling
-      sessionStorage.setItem('resetPasswordOrigin', window.location.origin);
-
-      // Send password reset email with callback URL and recovery mode
-      const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
-        redirectTo: `${window.location.origin}/auth/callback?mode=password_reset&flow=recovery`
+      console.log("Requesting password reset OTP for:", values.email);
+      const { error } = await supabase.auth.signInWithOtp({
+        email: values.email,
+        options: {
+          // Important: This tells Supabase this OTP is for password recovery
+          // It prevents the user from being logged in automatically after verification
+          shouldCreateUser: false,
+        }
       });
 
       if (error) {
-        console.error("Password reset error:", error);
+        console.error("Request OTP error:", error);
         toast({
           variant: "destructive",
           title: "Error",
-          description: error.message,
+          description: error.message || "Failed to send reset code. Please check the email and try again.",
         });
-        return;
+      } else {
+        toast({
+          title: "Check your email",
+          description: "We've sent you a 6-digit code.",
+        });
+        setEmailForVerification(values.email); // Store email
+        resetForm.setValue("email", values.email); // Set email in the second form
+        setStep("verify"); // Move to the next step
       }
-
-      // Show success message
-      toast({
-        title: "Check your email",
-        description: "We've sent you a password reset link",
-      });
-
-      // Wait a moment before redirecting
-      setTimeout(() => {
-        navigate("/signin");
-      }, 2000);
-
     } catch (error: any) {
-      console.error("Password reset error:", error);
+      console.error("Request OTP error:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to send reset email. Please try again.",
+        description: "An unexpected error occurred. Please try again.",
       });
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Handler for verifying the code and setting the new password
+  const handleVerifyAndReset = async (values: z.infer<typeof resetSchema>) => {
+     setIsLoading(true);
+     try {
+        console.log("Verifying code and resetting password for:", values.email);
+
+        // 1. Verify the OTP code
+        const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+            email: values.email,
+            token: values.code,
+            type: 'recovery', // Use 'recovery' type for password reset flow
+        });
+
+        if (verifyError || !verifyData?.session) { // Check for error or missing session
+            console.error("Verify OTP error:", verifyError);
+            toast({
+                variant: "destructive",
+                title: "Verification Failed",
+                description: verifyError?.message || "Invalid or expired code. Please request a new one.",
+            });
+            // Optionally reset to 'request' step or allow retry
+            // setStep("request");
+            // requestForm.reset();
+            // resetForm.reset();
+            return; // Stop execution if verification fails
+        }
+
+        console.log("OTP verified successfully. Session:", verifyData.session);
+
+        // 2. Update the password
+        // Note: verifyOtp with type 'recovery' grants temporary ability to update password
+        const { error: updateError } = await supabase.auth.updateUser({
+            password: values.password,
+        });
+
+        if (updateError) {
+            console.error("Update password error:", updateError);
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: updateError.message || "Failed to update password. Please try again.",
+            });
+        } else {
+            toast({
+                title: "Password Reset Successful",
+                description: "Your password has been updated. You can now sign in.",
+            });
+            navigate("/signin"); // Redirect to sign-in page
+        }
+     } catch (error: any) {
+        console.error("Reset password error:", error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "An unexpected error occurred during password reset.",
+        });
+     } finally {
+        setIsLoading(false);
+     }
+  };
+
+
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-      <Card className="w-[400px]">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             <Key className="w-12 h-12 text-primary" />
           </div>
           <CardTitle className="text-2xl">Reset Password</CardTitle>
           <CardDescription>
-            Enter your email to receive a password reset link
+            {step === "request"
+              ? "Enter your email to receive a 6-digit reset code."
+              : "Enter the code from your email and set a new password."}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="email"
-                        placeholder="Enter your email"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isLoading}
-              >
-                {isLoading ? "Sending..." : "Send Reset Link"}
-              </Button>
-
-              <div className="mt-4 text-center">
+          {step === "request" && (
+            <Form {...requestForm}>
+              <form onSubmit={requestForm.handleSubmit(handleRequestCode)} className="space-y-4">
+                <FormField
+                  control={requestForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          placeholder="your@email.com"
+                          {...field}
+                          disabled={isLoading}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <Button
-                  variant="link"
-                  className="text-sm text-muted-foreground"
-                  onClick={() => navigate("/signin")}
+                  type="submit"
+                  className="w-full"
+                  disabled={isLoading}
                 >
-                  Back to Sign In
+                  {isLoading ? "Sending Code..." : "Send Reset Code"}
                 </Button>
-              </div>
-            </form>
-          </Form>
+              </form>
+            </Form>
+          )}
+
+          {step === "verify" && (
+             <Form {...resetForm}>
+               <form onSubmit={resetForm.handleSubmit(handleVerifyAndReset)} className="space-y-4">
+                 {/* Email is hidden but included in the form data */}
+                 <input type="hidden" {...resetForm.register("email")} />
+
+                 <FormField
+                   control={resetForm.control}
+                   name="code"
+                   render={({ field }) => (
+                     <FormItem>
+                       <FormLabel>Verification Code</FormLabel>
+                       <FormControl>
+                         <Input
+                           placeholder="Enter 6-digit code"
+                           {...field}
+                           disabled={isLoading}
+                           maxLength={6}
+                         />
+                       </FormControl>
+                       <FormMessage />
+                     </FormItem>
+                   )}
+                 />
+
+                 <FormField
+                   control={resetForm.control}
+                   name="password"
+                   render={({ field }) => (
+                     <FormItem>
+                       <FormLabel>New Password</FormLabel>
+                       <FormControl>
+                         <Input
+                           type="password"
+                           placeholder="Enter new password"
+                           {...field}
+                           disabled={isLoading}
+                         />
+                       </FormControl>
+                       <FormMessage />
+                     </FormItem>
+                   )}
+                 />
+
+                 <FormField
+                   control={resetForm.control}
+                   name="confirmPassword"
+                   render={({ field }) => (
+                     <FormItem>
+                       <FormLabel>Confirm New Password</FormLabel>
+                       <FormControl>
+                         <Input
+                           type="password"
+                           placeholder="Confirm new password"
+                           {...field}
+                           disabled={isLoading}
+                         />
+                       </FormControl>
+                       <FormMessage /> {/* Shows "Passwords do not match" error here */}
+                     </FormItem>
+                   )}
+                 />
+
+                 <Button
+                   type="submit"
+                   className="w-full"
+                   disabled={isLoading}
+                 >
+                   {isLoading ? "Resetting..." : "Reset Password"}
+                 </Button>
+               </form>
+             </Form>
+          )}
+
+          <div className="mt-4 text-center">
+            <Button
+              variant="link"
+              className="text-sm text-muted-foreground"
+              onClick={() => {
+                // Reset state if going back
+                setStep("request");
+                requestForm.reset();
+                resetForm.reset();
+                navigate("/signin");
+              }}
+              disabled={isLoading}
+            >
+              Back to Sign In
+            </Button>
+            {step === "verify" && (
+               <Button
+                 variant="link"
+                 className="text-sm text-muted-foreground pl-4"
+                 onClick={() => {
+                   setStep("request");
+                   resetForm.reset(); // Clear verify form but keep email in request form
+                   requestForm.setValue("email", emailForVerification);
+                 }}
+                 disabled={isLoading}
+               >
+                 Request new code?
+               </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
