@@ -52,7 +52,7 @@ const formSchema = z.object({
 
 
 import { supabase } from "@/lib/supabase";
-import { getUser, createUser } from "@/lib/db/queries"; // Added createUser
+import { getUser } from "@/lib/db/queries";
 import { useToast } from "@/components/ui/use-toast"; // Added useToast for feedback
 
 const SignIn = () => {
@@ -136,59 +136,30 @@ const SignIn = () => {
       }
 
       try {
-        // 1. Sign up the user with Supabase Auth
+        // Sign up the user with Supabase Auth
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: values.email,
           password: values.password,
+          options: {
+            data: {
+              name: values.name,
+            }
+          }
         });
 
         if (signUpError) throw signUpError;
-        if (!signUpData.user) throw new Error("Sign up successful but no user data returned.");
+        if (!signUpData.user) throw new Error("Sign up failed, no user data returned.");
 
-        // 2. Create the user profile in the public.users table
-        let newUserProfile;
-        try {
-           newUserProfile = await createUser({
-            id: signUpData.user.id, // Use the ID from the auth user
-            email: values.email,
-            name: values.name,
-            role: "User", // Default role as requested
-          });
-        } catch (createProfileError: any) {
-           // If profile creation fails, maybe try to clean up the auth user?
-           // Or inform the user to contact support.
-           console.error("Profile creation error after sign up:", createProfileError);
-           // Attempt to delete the auth user for cleanup
-           if (supabase.auth && signUpData.user?.id) {
-             console.log(`Attempting to delete auth user ${signUpData.user.id} due to profile creation failure.`);
-             // Note: Deleting users might require admin privileges depending on Supabase setup
-              // await supabase.auth.admin.deleteUser(signUpData.user.id); // Requires admin client usually
-            }
-            // Instead of throwing, show toast and switch to sign-in mode
-            toast({
-              title: "Profile Setup Failed",
-              description: "Account created, but profile setup failed. Please try signing in.",
-              variant: "destructive",
-            });
-            setMode("signIn"); // Switch back to sign-in mode
-            return; // Stop further execution in the sign-up flow
-         }
-
-        // 3. Sign in the newly created user (optional, but good UX)
-        // Supabase signUp might automatically sign the user in, or require email confirmation.
-        // If email confirmation is required, we should inform the user.
-        // Let's assume for now it signs them in or confirmation is handled elsewhere.
-
-        // 4. Store details and navigate
-        localStorage.setItem("userRole", "User");
-        localStorage.setItem("userEmail", values.email);
-        localStorage.setItem("userId", signUpData.user.id);
-
+        // Show success message
         toast({
-          title: "Sign Up Successful",
-          description: "Welcome! Redirecting you to the dashboard.",
+          title: "Account Created Successfully",
+          description: "We've sent you a welcome email. You can now sign in with your credentials.",
+          duration: 6000, // Show for longer
         });
-        navigate("/dashboard");
+
+        // Clear the form and switch to sign in mode
+        form.reset();
+        setMode("signIn");
 
       } catch (error: any) {
         console.error("Sign up error:", error);
